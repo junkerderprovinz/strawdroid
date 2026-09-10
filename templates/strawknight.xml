@@ -51,7 +51,7 @@
   <Category>Tools: Development:</Category>
   <WebUI>https://[IP]:[PORT:3001]/</WebUI>
   <TemplateURL>https://raw.githubusercontent.com/junkerderprovinz/strawknight/main/templates/strawknight.xml</TemplateURL>
-  <Icon>https://raw.githubusercontent.com/junkerderprovinz/strawknight/main/.github/assets/icon.png</Icon>
+  <Icon>file:///boot/config/plugins/dockerMan/icons/strawknight.png</Icon>
   <ExtraParams>--restart=no --device=/dev/kvm --shm-size=2gb --cpus="4" --memory="8g"</ExtraParams>
   <PostArgs/>
   <CPUset/>
