@@ -43,6 +43,28 @@ fi
 AVD_NAME="${AVD_NAME:-strawknight}"
 AVD_DIR="/config/.android/avd/${AVD_NAME}.avd"
 
+# An AVD names its system image by PATH, and the image ships only one Android
+# level. Raise the level and the device in the volume points at a directory that
+# is no longer here: the emulator then fails with a message about a missing
+# kernel, which reads as a broken image rather than as "your device is older
+# than your container".
+#
+# So the device is checked before it is trusted, and a stale one is moved ASIDE
+# rather than deleted. Everything installed on it is gone either way once its
+# system image is, but a folder somebody can still look into beats a folder that
+# silently stopped existing.
+if [ -d "${AVD_DIR}" ]; then
+    sysdir="$(sed -n 's/^image\.sysdir\.1=//p' "${AVD_DIR}/config.ini" 2>/dev/null | tr -d '\r')"
+    if [ -n "${sysdir}" ] && [ ! -d "${ANDROID_SDK_ROOT}/${sysdir}" ]; then
+        stamp="$(date +%Y%m%d-%H%M%S)"
+        log "WARNING: AVD ${AVD_NAME} was built on ${sysdir}, which this image no longer carries."
+        log "WARNING: moving it to ${AVD_NAME}.avd.old-${stamp} and building a fresh one on ${STRAWKNIGHT_PACKAGE}."
+        log "WARNING: anything installed on the old device, and any permission it was granted, is gone with it."
+        mv "${AVD_DIR}" "${AVD_DIR}.old-${stamp}"
+        mv "/config/.android/avd/${AVD_NAME}.ini" "/config/.android/avd/${AVD_NAME}.ini.old-${stamp}" 2>/dev/null || true
+    fi
+fi
+
 if [ -d "${AVD_DIR}" ]; then
     log "AVD ${AVD_NAME} already exists, keeping it and everything installed on it"
 else

@@ -21,14 +21,16 @@
     NOT Android-in-a-container (ReDroid, Waydroid). Those run the Android&#13;
     userspace directly on the host kernel: no battery, no motion sensor, no&#13;
     power HAL. Doze therefore never fires, WorkManager runs more eagerly than it&#13;
-    ever would on real hardware, and Android 14's limits on a dataSync&#13;
+    ever would on real hardware, and Android's limits on a dataSync&#13;
     foreground service never kick in. For an app whose job is syncing files in&#13;
     the background, a rig that is green because it never asks the question is&#13;
     worse than no rig at all.&#13;
     &#13;
-    Android 14 (API 34) on purpose: that is where the six-hour daily cap on&#13;
-    dataSync foreground services landed. The google_apis image carries Play&#13;
-    services and a real DocumentsUI, which is the SAF folder picker.&#13;
+    Android 16 (API 36), the NEWEST on purpose. It keeps the six-hour daily cap&#13;
+    on dataSync foreground services that arrived in 14 AND the timeout that&#13;
+    arrived in 15, so the newest level is the STRICTEST rather than a different&#13;
+    one - and the Play Store wants a recent target level anyway. The google_apis&#13;
+    image carries Play services and a real DocumentsUI, the SAF folder picker.&#13;
     &#13;
     Screen: Selkies over HTTPS on 3001. No login.&#13;
     &#13;
@@ -62,6 +64,7 @@
   <Config Name="WebUI Port (HTTP / Selkies)" Target="3000" Default="3000" Mode="tcp" Description="Optional fallback. The WebUI defaults to HTTPS on 3001." Type="Port" Display="always" Required="false" Mask="false">3000</Config>
   <Config Name="ADB Port" Target="5555" Default="5555" Mode="tcp" Description="Reached from a development machine with: adb connect 192.168.20.49:5555 . The emulator's own adb binds to loopback, so a forwarder inside the container hands this port to it; without that the port would appear open and never complete a handshake." Type="Port" Display="always" Required="true" Mask="false">5555</Config>
   <Config Name="AppData (/config)" Target="/config" Default="/mnt/user/appdata/strawknight" Mode="rw" Description="The AVD itself, plus installed apps, granted permissions and anything a test wrote. The ONLY persistent mount by design. Without it every restart is a factory reset, which also throws away the folder permission an app was granted through the SAF picker - one of the things being tested." Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/strawknight</Config>
+  <Config Name="Share for APKs and test files (/share)" Target="/share" Default="/mnt/user/download" Mode="ro" Description="Read-only. Drop an APK into this share from anywhere on the network, then in the container's terminal: sk list to see them, sk install &lt;name&gt;.apk to put one on the device. sk push &lt;file&gt; copies test files into the device's Downloads, where the SAF picker can reach them. Read-only on purpose: this rig runs unfinished code, which has no business writing to a share full of everything else." Type="Path" Display="always" Required="false" Mask="false">/mnt/user/download</Config>
   <Config Name="Emulator rendering (EMULATOR_GPU)" Target="EMULATOR_GPU" Default="swiftshader_indirect" Mode="" Description="How the emulator draws. swiftshader_indirect works everywhere, including with no GPU wired in at all. 'host' is faster and is what makes scrolling read honestly, but it needs the nvidia runtime and /dev/dri - set it once the GPU is confirmed." Type="Variable" Display="always" Required="true" Mask="false">swiftshader_indirect</Config>
   <Config Name="Device profile (EMULATOR_DEVICE)" Target="EMULATOR_DEVICE" Default="pixel_6" Mode="" Description="Which device the emulator pretends to be. Decides screen size and density, which is what a layout is actually judged against. Read on FIRST boot only: the AVD is created once and then kept, so changing this later needs the AVD removed from /config/.android/avd." Type="Variable" Display="always" Required="true" Mask="false">pixel_6</Config>
   <Config Name="Emulated RAM in MB (EMULATOR_RAM)" Target="EMULATOR_RAM" Default="2048" Mode="" Description="Memory given to the emulated phone. Read on FIRST boot only, same as the device profile. Below about 1536 Android 14 boots badly or not at all." Type="Variable" Display="advanced" Required="false" Mask="false">2048</Config>

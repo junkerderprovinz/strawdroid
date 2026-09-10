@@ -91,10 +91,20 @@ RUN set -eux; \
 # ---------------------------------------------------------------------------
 # The Android SDK.
 #
-# ANDROID_API 34 is a decision rather than "the newest": Android 14 is where
-# the six-hour daily cap on dataSync foreground services landed, and a sync app
-# has to survive exactly that. Testing on 15 or 16 instead would test a rule the
-# users on 14 do not have.
+# ANDROID_API 36 is Android 16, and it is the NEWEST on purpose.
+#
+# This started at 34, reasoning that Android 14 is where the six-hour daily cap
+# on dataSync foreground services landed and a sync app has to survive exactly
+# that. That was too cautious, and jdp said so. 15 keeps the cap AND adds a
+# timeout on top, 16 keeps both, so the newest level is the STRICTEST rather
+# than a different one - and the Play Store requires a recent target level for
+# a new submission anyway. Testing against 14 would have been testing a rule
+# more lenient than the one the app ships under.
+#
+# Only ONE level is installed, and that has a consequence the boot script has to
+# handle: an AVD in the persistent volume points at a system image by path, so
+# raising this number leaves the existing device pointing at an image that is no
+# longer in the container. See init-strawknight, which notices and says so.
 #
 # google_apis rather than the plain AOSP image, because it carries Play services
 # and a real DocumentsUI - the SAF file picker an app asks for a folder with. An
@@ -108,7 +118,7 @@ ENV ANDROID_SDK_ROOT=/opt/android-sdk \
     ANDROID_HOME=/opt/android-sdk
 ARG CMDLINE_TOOLS_VERSION=13114758
 ARG CMDLINE_TOOLS_SHA256=7ec965280a073311c339e571cd5de778b9975026cfcbe79f2b1cdcb1e15317ee
-ARG ANDROID_API=34
+ARG ANDROID_API=36
 ARG ANDROID_ABI=x86_64
 ARG ANDROID_TAG=google_apis
 RUN set -eux; \
@@ -167,6 +177,7 @@ RUN set -eux; \
 
 RUN chmod +x \
     /usr/local/bin/print-banner.sh \
+    /usr/local/bin/sk \
     /etc/s6-overlay/s6-rc.d/init-nologin/run \
     /etc/s6-overlay/s6-rc.d/init-strawknight/run \
     /etc/s6-overlay/s6-rc.d/svc-emulator/run \
@@ -203,6 +214,10 @@ ENV KEYBOARD_LAYOUT=us \
 # container with no GPU wired in at all. `host` is faster and is what makes
 # scrolling read honestly, but it needs the nvidia runtime and /dev/dri; set it
 # from the template once the GPU is confirmed.
+# Where the read-only share lands. The `sk` helper looks here for an APK given
+# by bare name, so `sk install arrowloop.apk` finds it without a path.
+ENV SK_SHARE=/share
+
 ENV EMULATOR_GPU=swiftshader_indirect \
     EMULATOR_DEVICE=pixel_6 \
     EMULATOR_RAM=2048 \

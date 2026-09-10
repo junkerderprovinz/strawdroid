@@ -44,10 +44,13 @@ Judging how an app *feels* is judging its scrolling and its transitions, which i
 
 ## 4. Which Android
 
-**14, API 34, `google_apis`, x86_64.** Both halves are a decision rather than "the newest available":
+**16, API 36, `google_apis`, x86_64**, and the level is the newest on purpose.
 
-- **14** is where the six-hour daily cap on `dataSync` foreground services landed. Testing on 15 or 16 instead would test a rule the users on 14 do not have.
-- **`google_apis`** carries Play services and a real DocumentsUI, which is the SAF folder picker an app asks for a folder with. An image without one cannot answer whether that flow works at all.
+This started at 14, reasoning that Android 14 is where the six-hour daily cap on `dataSync` foreground services landed. That was too cautious: 15 keeps the cap and adds a timeout on top, 16 keeps both, so the newest level is the **strictest** rather than a different one - and the Play Store wants a recent target level for a new submission anyway. Pinning to 14 would have been testing a rule more lenient than the one the app ships under.
+
+`google_apis` rather than plain AOSP, because it carries Play services and a real DocumentsUI, which is the SAF folder picker an app asks for a folder with. An image without one cannot answer whether that flow works at all.
+
+Only one level is installed, and that has a consequence: an AVD in the persistent volume names its system image by path, so raising `ANDROID_API` leaves the existing device pointing at an image the container no longer has. The boot script notices, moves the stale device aside as `<name>.avd.old-<stamp>`, says in the log that everything installed on it is gone with it, and builds a fresh one.
 
 <br>
 
@@ -79,6 +82,24 @@ On Unraid use [`templates/strawknight.xml`](templates/strawknight.xml), which pu
 | Undo it | `adb -s <address>:5555 shell dumpsys deviceidle unforce` |
 
 The container's log ends on a banner carrying all three lines with the real address filled in.
+
+### From the container's own terminal
+
+Mount a share read-only at `/share` and an APK dropped into it from anywhere on the network can be installed without leaving the browser. `sk` is the helper:
+
+```
+sk list                    the APKs on the share, newest first
+sk install <name>.apk      install one, keeping the earlier build's data
+sk push <file|dir>         copy test files into the device's Downloads
+sk doze on | off           force deep idle, or release it
+sk shell [...]             a shell on the device
+```
+
+A bare name is taken relative to the share, so `sk install arrowloop.apk` finds `/share/arrowloop.apk`.
+
+The share is mounted **read-only** on purpose: this rig runs unfinished code, and unfinished code has no business writing to a share full of everything else. `sk push` copies INTO the device instead, and tells the media scanner about it - without that the file is on the disk and absent from every chooser, which looks exactly like the push having silently failed.
+
+`sk doze on` unplugs the battery before forcing idle, which is not optional: a device that believes it is charging refuses to go idle, and the force then reports success while nothing happens.
 
 <br>
 
