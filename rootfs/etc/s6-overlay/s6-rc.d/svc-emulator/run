@@ -1,0 +1,53 @@
+#!/usr/bin/with-contenv bash
+# shellcheck shell=bash
+# -----------------------------------------------------------------------------
+# svc-emulator - the phone itself
+# -----------------------------------------------------------------------------
+# A longrun rather than a oneshot: if the emulator dies, s6 brings it back, and
+# a rig whose phone quietly vanished halfway through an afternoon is worse than
+# one that never started.
+#
+# It draws onto the Selkies X display, which is the entire point of this image
+# over budtmo's: the window is a real X client on a desktop that is streamed
+# with WebRTC and encoded on the box's GPU, rather than a VNC framebuffer diff.
+# -----------------------------------------------------------------------------
+AVD_NAME="${AVD_NAME:-strawknight}"
+
+# DISPLAY is set for the DESKTOP SESSION by the base image, not for every s6
+# service, so it has to be named here. Without it the emulator opens no window
+# at all and simply runs headless, which looks from the WebUI exactly like an
+# emulator that failed to start.
+export DISPLAY="${DISPLAY:-:1}"
+
+# Wait for the X server the base image starts. Launching before it exists gives
+# "cannot open display", the emulator exits, s6 restarts it, and the log fills
+# with the same line forever - which reads as a broken image rather than as a
+# race.
+for _ in $(seq 1 120); do
+    if xdpyinfo -display "${DISPLAY:-:1}" >/dev/null 2>&1; then
+        break
+    fi
+    sleep 1
+done
+
+echo "[svc-emulator] starting ${AVD_NAME} on ${DISPLAY:-:1} (gpu=${EMULATOR_GPU})"
+
+# -no-snapshot-save: the snapshot is what makes a second start fast, and it is
+# also what makes a start reproduce whatever state the last session was left in,
+# including a half-open dialog and a permission granted in an earlier build.
+# Loading one is offered, saving one is not: a test rig that quietly restores
+# yesterday's mess is a rig whose failures cannot be trusted.
+#
+# -no-audio: nothing here listens, and the audio device the emulator wants does
+# not exist in this container, so asking for it is one warning per start for
+# nothing.
+exec s6-setuidgid abc \
+    "${ANDROID_SDK_ROOT}/emulator/emulator" \
+    -avd "${AVD_NAME}" \
+    -gpu "${EMULATOR_GPU}" \
+    -no-snapshot-save \
+    -no-audio \
+    -no-boot-anim \
+    -camera-back none \
+    -camera-front none \
+    ${EMULATOR_EXTRA_ARGS}

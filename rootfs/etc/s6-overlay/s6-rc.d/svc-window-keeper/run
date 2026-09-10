@@ -1,0 +1,65 @@
+#!/usr/bin/with-contenv bash
+# shellcheck shell=bash
+# -----------------------------------------------------------------------------
+# svc-window-keeper - keep the phone on the screen
+# -----------------------------------------------------------------------------
+# Measured on the first working build: the emulator opened its window at
+# y = -551 on a 768-pixel-tall desktop, so all but the last sixty pixels of it
+# sat above the visible area. From the browser that is an empty desktop, which
+# is indistinguishable from an emulator that never started - and it is the exact
+# failure the wallpaper hint was written to rule out, arriving by a different
+# route.
+#
+# A one-off placement would not hold, and that is why this is a loop rather than
+# a rule in openbox's rc.xml. Selkies resizes the X display to whatever the
+# browser window is: every time somebody resizes their browser, the desktop
+# changes size underneath a window that does not move, and a phone that was
+# centred is off the edge again.
+#
+# So: watch the screen and the window, and put the window back whenever it has
+# ended up outside. Nothing happens while it is where it belongs, so this costs
+# one cheap X query every couple of seconds and never fights somebody who has
+# dragged the window somewhere on purpose - being dragged somewhere VISIBLE is
+# not "outside".
+# -----------------------------------------------------------------------------
+export DISPLAY="${DISPLAY:-:1}"
+
+for _ in $(seq 1 120); do
+    xdpyinfo >/dev/null 2>&1 && break
+    sleep 1
+done
+
+# The emulator's own window carries the AVD name in its title. Matching the
+# title rather than the class avoids the emulator's three OTHER windows - a
+# 1x1 placeholder, a 100x30 stub and the tool strip - which are not the phone
+# and must not be moved on top of it.
+AVD_NAME="${AVD_NAME:-strawknight}"
+TITLE="Android Emulator - ${AVD_NAME}"
+
+while :; do
+    id="$(wmctrl -l | awk -v t="${TITLE}" 'index($0, t) { print $1; exit }')"
+    if [ -n "${id}" ]; then
+        # Geometry of that window, and of the screen it lives on.
+        geo="$(xwininfo -id "${id}" 2>/dev/null)"
+        w="$(echo "${geo}" | awk '/Width:/  { print $2 }')"
+        h="$(echo "${geo}" | awk '/Height:/ { print $2 }')"
+        x="$(echo "${geo}" | awk '/Absolute upper-left X:/ { print $NF }')"
+        y="$(echo "${geo}" | awk '/Absolute upper-left Y:/ { print $NF }')"
+        read -r sw sh <<<"$(xdpyinfo | awk '/dimensions:/ { split($2, d, "x"); print d[1], d[2] }')"
+
+        if [ -n "${w}" ] && [ -n "${sw}" ]; then
+            # Outside means any edge past the screen. A window taller than the
+            # screen cannot be fully inside, so it is pinned to the top left
+            # instead of centred, which at least shows its top rather than its
+            # middle.
+            if [ "${x}" -lt 0 ] || [ "${y}" -lt 0 ] \
+               || [ "$((x + w))" -gt "${sw}" ] || [ "$((y + h))" -gt "${sh}" ]; then
+                nx=$(( (sw - w) / 2 )); [ "${nx}" -lt 0 ] && nx=0
+                ny=$(( (sh - h) / 2 )); [ "${ny}" -lt 0 ] && ny=0
+                echo "[svc-window-keeper] moving the phone from ${x},${y} to ${nx},${ny} on a ${sw}x${sh} screen"
+                wmctrl -i -r "${id}" -e "0,${nx},${ny},-1,-1" 2>/dev/null || true
+            fi
+        fi
+    fi
+    sleep 2
+done

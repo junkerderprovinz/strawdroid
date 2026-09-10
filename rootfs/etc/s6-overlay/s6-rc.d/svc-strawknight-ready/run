@@ -1,0 +1,79 @@
+#!/usr/bin/with-contenv bash
+# shellcheck shell=bash
+# -----------------------------------------------------------------------------
+# svc-strawknight-ready - say when the phone is actually usable
+# -----------------------------------------------------------------------------
+# House standard: every own-image container prints an "<APP> IS READY" line as
+# the last block of its log.
+#
+# Here the bar is higher than elsewhere, and deliberately. A desktop that serves
+# while the emulator is still booting is not ready for anything: an `adb install`
+# against it fails, and a person opening the WebUI sees a black rectangle. So
+# this waits for the WebUI AND for Android to report a completed boot, and says
+# which of the two it is still waiting on.
+# -----------------------------------------------------------------------------
+FLAG="/run/strawknight-ready.printed"
+
+# /run is tmpfs, wiped on every container start, so the banner prints once per
+# start rather than once per image.
+if [[ -f "${FLAG}" ]]; then
+    exec sleep infinity
+fi
+
+web=0
+for _ in $(seq 1 150); do
+    if (exec 3<>/dev/tcp/127.0.0.1/3000) 2>/dev/null; then
+        exec 3>&- 3<&-
+        web=1
+        break
+    fi
+    sleep 2
+done
+
+# The phone. A cold first boot creates the data partition and takes minutes, so
+# this waits considerably longer than the WebUI check does; a rig that gave up
+# after thirty seconds would report a failure on every first start.
+booted=0
+for _ in $(seq 1 300); do
+    if [[ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r\n')" == "1" ]]; then
+        booted=1
+        break
+    fi
+    sleep 2
+done
+
+release="unknown"
+if [[ "${booted}" -eq 1 ]]; then
+    release="$(adb shell getprop ro.build.version.release 2>/dev/null | tr -d '\r\n')"
+    sdk="$(adb shell getprop ro.build.version.sdk 2>/dev/null | tr -d '\r\n')"
+    [[ -n "${sdk}" ]] && release="${release} (API ${sdk})"
+fi
+
+own_ip="$(ip -4 route get 1.1.1.1 2>/dev/null | awk '{for(i=1;i<NF;i++) if($i=="src") print $(i+1); exit}')"
+[[ -z "${own_ip}" ]] && own_ip="this container"
+
+/usr/local/bin/print-banner.sh "StrawKnight" "Android ${release} on Selkies" 2>/dev/null || true
+
+GREEN='\033[0;32m'
+RED='\033[0;31m'
+NC='\033[0m'
+
+if [[ "${web}" -eq 1 && "${booted}" -eq 1 ]]; then
+    echo -e "  ${GREEN}✓ STRAWKNIGHT IS READY${NC} - Android ${release}"
+    echo "    Screen:  https://${own_ip}:${CUSTOM_HTTPS_PORT:-3001}/"
+    echo "    Deploy:  adb connect ${own_ip}:${ADB_DEVICE_PORT:-5555}"
+    echo "    Doze:    adb -s ${own_ip}:${ADB_DEVICE_PORT:-5555} shell dumpsys deviceidle force-idle"
+elif [[ "${web}" -eq 1 ]]; then
+    # Named separately because the two failures have nothing to do with each
+    # other: a desktop that never served is a Selkies problem, and a phone that
+    # never booted is almost always a missing /dev/kvm.
+    echo -e "  ${RED}✗ STRAWKNIGHT IS NOT READY${NC} - the desktop serves but Android never finished booting"
+    echo "    The usual cause is a missing --device=/dev/kvm on this container; check the log above."
+else
+    echo -e "  ${RED}✗ STRAWKNIGHT IS NOT READY${NC} - the WebUI never answered, check the log above"
+fi
+echo ""
+
+touch "${FLAG}"
+# Longrun: stay up so s6 does not restart us and re-print the banner.
+exec sleep infinity

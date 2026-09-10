@@ -1,0 +1,76 @@
+#!/usr/bin/with-contenv bash
+# shellcheck shell=bash
+# -----------------------------------------------------------------------------
+# init-strawknight - make the phone, once, and keep it
+# -----------------------------------------------------------------------------
+# Runs as an s6-rc oneshot AFTER init-selkies-config, because that base oneshot
+# seeds /config/.config/openbox/{autostart,menu.xml} from /defaults on first
+# boot. autostart is force-refreshed on EVERY start here so an image update to
+# it always takes effect; menu.xml is deliberately left first-boot-only, so hand
+# edits somebody makes later survive.
+#
+# The AVD is created in /config and NEVER recreated if it is already there. That
+# is the whole reason it lives in the volume: it holds the installed app, the
+# folder permission granted through the SAF picker, and whatever a test wrote.
+# Rebuilding it on every start would silently reset the very state the rig
+# exists to exercise, and it would look like the app forgetting its permission.
+# -----------------------------------------------------------------------------
+set -e
+
+log() { echo "[init-strawknight] $*"; }
+
+CONFIG_HOME="/config/.config"
+mkdir -p "${CONFIG_HOME}/openbox" \
+         "/config/.local/share" \
+         "/config/.cache" \
+         "/config/.android/avd"
+
+cp -af /defaults/autostart "${CONFIG_HOME}/openbox/autostart"
+chmod 0755 "${CONFIG_HOME}/openbox/autostart"
+log "autostart synced from /defaults/autostart"
+
+# KVM first, and loudly. Without it the emulator either refuses to start or
+# falls back to an interpreter so slow the rig is unusable, and both failures
+# look like "the container is broken" from outside. Naming the missing device
+# here turns a mystery into a one-line fix on the Unraid template.
+if [ -c /dev/kvm ] && [ -r /dev/kvm ] && [ -w /dev/kvm ]; then
+    log "KVM available"
+else
+    log "WARNING: /dev/kvm is missing or not writable - add --device=/dev/kvm to this container."
+    log "WARNING: without it the emulator will not start."
+fi
+
+AVD_NAME="${AVD_NAME:-strawknight}"
+AVD_DIR="/config/.android/avd/${AVD_NAME}.avd"
+
+if [ -d "${AVD_DIR}" ]; then
+    log "AVD ${AVD_NAME} already exists, keeping it and everything installed on it"
+else
+    log "creating AVD ${AVD_NAME} from ${STRAWKNIGHT_PACKAGE} (device ${EMULATOR_DEVICE})"
+    # --device names a hardware profile: screen size and density, which is what
+    # a layout is actually judged against. An AVD with no profile gets a generic
+    # square that resembles no phone anybody owns.
+    echo "no" | avdmanager create avd \
+        --name "${AVD_NAME}" \
+        --package "${STRAWKNIGHT_PACKAGE}" \
+        --device "${EMULATOR_DEVICE}" \
+        --force >/dev/null
+
+    # More memory and a real disk than avdmanager's defaults. The stock 384 MB
+    # of RAM and 800 MB of storage cannot hold an app plus the files a sync tool
+    # is meant to move, and running out of either fails as a crash rather than
+    # as a message.
+    cfg="${AVD_DIR}/config.ini"
+    {
+        echo "hw.ramSize=${EMULATOR_RAM}"
+        echo "disk.dataPartition.size=6G"
+        echo "hw.keyboard=yes"
+    } >> "${cfg}"
+    log "AVD created"
+fi
+
+chown -R "${PUID:-99}:${PGID:-100}" \
+    "${CONFIG_HOME}" "/config/.local" "/config/.cache" "/config/.android" 2>/dev/null || true
+
+log "init-strawknight done"
+exit 0

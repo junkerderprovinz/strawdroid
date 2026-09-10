@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- StrawKnight's openbox right-click menu. Seeded into
+     /config/.config/openbox/menu.xml on FIRST boot only (the base image's
+     init-selkies-config: `if [[ ! -f "$CONF_DIR/menu.xml" ]]`). Edit this file
+     and it takes effect on a fresh /config; an existing /config keeps whatever
+     menu is already there, including hand edits made later.
+
+     The entries are the two things somebody actually reaches for while the
+     emulator window is on screen: a shell to talk to the phone with, and a way
+     to put it back when a stray click has lost it behind something. -->
+
+<openbox_menu xmlns="http://openbox.org/"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://openbox.org/
+                file:///usr/share/openbox/menu.xsd">
+
+<menu id="root-menu" label="StrawKnight">
+  <item label="Terminal">
+    <action name="Execute"><execute>xterm</execute></action>
+  </item>
+  <separator />
+  <item label="Reconfigure">
+    <action name="Reconfigure" />
+  </item>
+  <item label="Restart">
+    <action name="Restart" />
+  </item>
+</menu>
+
+</openbox_menu>

@@ -1,0 +1,53 @@
+#!/usr/bin/with-contenv bash
+# shellcheck shell=bash
+# -----------------------------------------------------------------------------
+# svc-adb-bridge - let the outside world reach the phone
+# -----------------------------------------------------------------------------
+# The emulator's adb daemon binds to 127.0.0.1 and nothing else. Inside the
+# container that is fine; from a development machine it means the port is open,
+# the handshake never happens, and `adb connect` sits there until it times out -
+# which reads as a network problem and is not one.
+#
+# So one forwarder: everything arriving on 5555 from outside is handed to the
+# emulator's own adb port on loopback. That is what makes
+#
+#     adb connect <this container's address>:5555
+#
+# work, and with it Android Studio's Run and Debug against this container as if
+# it were a phone on a cable.
+#
+# It binds the container's OWN address rather than 0.0.0.0, and that is not a
+# nicety. 0.0.0.0:5555 includes 127.0.0.1:5555, which the emulator already
+# holds, so the bind fails with "address already in use" and the forwarder never
+# starts - a failure that looks exactly like the emulator not being up yet.
+#
+# reuseaddr so a restart does not have to wait out TIME_WAIT, fork so more than
+# one client can attach - Android Studio and a terminal at the same time is the
+# ordinary case, not the exception.
+# -----------------------------------------------------------------------------
+ADB_DEVICE_PORT="${ADB_DEVICE_PORT:-5555}"
+
+# The address this container answers on, taken from the route it would use to
+# leave. `hostname -i` is the obvious call and the wrong one: it can return the
+# loopback address, several addresses, or nothing at all depending on how the
+# container's hosts file was written.
+own_ip="$(ip -4 route get 1.1.1.1 2>/dev/null | awk '{for(i=1;i<NF;i++) if($i=="src") print $(i+1); exit}')"
+if [ -z "${own_ip}" ]; then
+    echo "[svc-adb-bridge] could not work out this container's own address; adb will only be reachable from inside" >&2
+    exec sleep infinity
+fi
+
+# Wait until the emulator's port is actually listening. socat started against a
+# closed port would accept connections from outside and refuse each one, which
+# is a worse answer than "not yet".
+for _ in $(seq 1 300); do
+    if (exec 3<>/dev/tcp/127.0.0.1/"${ADB_DEVICE_PORT}") 2>/dev/null; then
+        exec 3>&- 3<&-
+        break
+    fi
+    sleep 2
+done
+
+echo "[svc-adb-bridge] forwarding ${own_ip}:${ADB_DEVICE_PORT} to 127.0.0.1:${ADB_DEVICE_PORT}"
+exec socat "tcp-listen:${ADB_DEVICE_PORT},fork,reuseaddr,bind=${own_ip}" \
+           "tcp:127.0.0.1:${ADB_DEVICE_PORT}"
