@@ -49,7 +49,36 @@ done
 adb shell mkdir -p "${DEST}" >/dev/null 2>&1 || true
 echo "[svc-share-mirror] mirroring ${SHARE} into ${DEST} every ${EVERY}s"
 
+too_big=""
+
 while :; do
+    # A CAP, because the share this is pointed at on Unraid is the download
+    # folder - a place whose whole job is to grow. Measured when this was
+    # written: 228 MB of share against 3.7 GB free on the device, comfortable.
+    # One evening of downloading and that reverses, and the failure mode
+    # without a cap is the emulator's disk filling silently, which surfaces
+    # later as an app that will not install for reasons that have nothing to do
+    # with the app.
+    #
+    # Refused rather than truncated: a mirror that quietly copies some of a
+    # folder is worse than one that says it stopped, because the missing file
+    # is the one somebody is looking for.
+    size="$(du -sm "${SHARE}" 2>/dev/null | cut -f1)"
+    if [ -n "${size}" ] && [ "${size}" -gt "${SHARE_MIRROR_MAX_MB:-2048}" ]; then
+        # Said ONCE per crossing, not every thirty seconds.
+        if [ "${too_big}" != "yes" ]; then
+            echo "[svc-share-mirror] ${SHARE} is ${size} MB, over the ${SHARE_MIRROR_MAX_MB:-2048} MB cap - not mirroring."
+            echo "[svc-share-mirror] Point the mount at a smaller folder, or raise SHARE_MIRROR_MAX_MB. 'sk install' still works."
+            too_big="yes"
+        fi
+        sleep "${EVERY}"
+        continue
+    fi
+    if [ "${too_big}" = "yes" ]; then
+        echo "[svc-share-mirror] ${SHARE} is back under the cap at ${size} MB - mirroring again"
+        too_big=""
+    fi
+
     # `.` rather than the directory name: pushing ${SHARE} itself would nest a
     # second folder inside DEST on every run, which is the classic rsync-style
     # trailing-slash mistake wearing adb's clothes.
