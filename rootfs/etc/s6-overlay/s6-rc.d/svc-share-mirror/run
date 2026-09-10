@@ -21,6 +21,15 @@
 # Files app looks and where the SAF picker offers it without anybody having to
 # grant a tree first.
 #
+# THE TOP LEVEL ONLY, files and not the tree underneath. That is a decision the
+# first real run made for me: the share on Unraid is the download folder, it
+# held 49,000 files, and one recursive pass took 100 seconds against a
+# 30-second interval - so the service was never not copying. It was 228 MB and
+# comfortably under the size cap, because the cost was COUNT rather than bytes.
+# This share's job here is "drop a build in, install it on the phone", which is
+# a handful of files at the top; a tree of test data underneath is a different
+# job and `sk push <dir>` does that one on demand.
+#
 # `adb push --sync` is what makes this cheap: it compares timestamps and sizes
 # and only sends what differs, so the steady state is one comparison every
 # thirty seconds and no traffic. Without it a 33 MB APK would be copied twice a
@@ -50,6 +59,8 @@ adb shell mkdir -p "${DEST}" >/dev/null 2>&1 || true
 echo "[svc-share-mirror] mirroring ${SHARE} into ${DEST} every ${EVERY}s"
 
 too_big=""
+wanted="$(mktemp)"
+trap 'rm -f "${wanted}"' EXIT
 
 while :; do
     # A CAP, because the share this is pointed at on Unraid is the download
@@ -79,23 +90,65 @@ while :; do
         too_big=""
     fi
 
-    # `.` rather than the directory name: pushing ${SHARE} itself would nest a
-    # second folder inside DEST on every run, which is the classic rsync-style
-    # trailing-slash mistake wearing adb's clothes.
-    if out="$(cd "${SHARE}" && adb push --sync . "${DEST}" 2>&1)"; then
-        # Only say something when something moved. A line every thirty seconds
-        # would bury every other service's output in the container log.
-        case "${out}" in
-            *"0 files pushed"*) : ;;
-            *) echo "[svc-share-mirror] ${out##*$'\n'}"
-               # The media scanner is what makes a copied file VISIBLE to the
-               # Files app and to the picker. Without it the file is on the
-               # disk and absent from every chooser, which reads as the mirror
-               # having silently failed.
-               adb shell am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE \
-                   -d "file://${DEST}" >/dev/null 2>&1 || true
-               ;;
-        esac
+    # The TOP LEVEL, files only, and not the tree underneath.
+    #
+    # This started as a recursive mirror and the first run on a real share
+    # settled it: 49,000 files, of which 12,331 moved, in 100 seconds - against
+    # a 30-second interval, so the service was never not copying. The share was
+    # 228 MB and comfortably under the size cap, because the cost there is
+    # COUNT, not bytes. A cap on size does not see it coming.
+    #
+    # The shape is the answer rather than a bigger cap. This share's job here
+    # is "drop a build in, install it on the phone", and that is a handful of
+    # files sitting at the top. A folder of test data underneath is a different
+    # job, and `sk push <dir>` does that one on demand, for the one directory
+    # somebody actually wants.
+    moved=0
+    failed=0
+    for file in "${SHARE}"/*; do
+        [ -f "${file}" ] || continue
+        name="$(basename "${file}")"
+        printf '%s\n' "${name}" >>"${wanted}"
+        # --sync compares size and timestamp, so an unchanged file costs a
+        # comparison and no transfer.
+        if out="$(adb push --sync "${file}" "${DEST}/${name}" 2>&1)"; then
+            case "${out}" in *"0 files pushed"*|*"skipped"*) : ;; *) moved=$((moved + 1)) ;; esac
+        else
+            # LOUD. The first version only logged on success, so a push that
+            # failed said nothing at all and the mirror looked like it was
+            # simply idle - which is how the missing files went unnoticed.
+            echo "[svc-share-mirror] could not send ${name}: ${out##*$'\n'}"
+            failed=$((failed + 1))
+        fi
+    done
+
+    # Gone on the host means gone on the phone. `adb push --sync` only ever
+    # adds and updates, so without this the device keeps every build ever
+    # dropped into the share - and the one thing worse than not finding the new
+    # APK is tapping last week's by mistake.
+    #
+    # Anything not in the share, including directories, and that is within this
+    # service's business rather than outside it: DEST is created by the mirror,
+    # named after the share and holding nothing else. `-rf` rather than `-f`
+    # because a leftover DIRECTORY is exactly what the first version left
+    # behind - `rm -f` refuses one, so a folder from the recursive era sat
+    # there looking like part of the share long after it had been dropped.
+    removed=0
+    while IFS= read -r name; do
+        [ -n "${name}" ] || continue
+        if ! grep -qxF "${name}" "${wanted}" 2>/dev/null; then
+            adb shell rm -rf "'${DEST}/${name}'" >/dev/null 2>&1 && removed=$((removed + 1))
+        fi
+    done <<<"$(adb shell "ls -1 '${DEST}' 2>/dev/null" | tr -d '\r')"
+
+    if [ "${moved}" -gt 0 ] || [ "${removed}" -gt 0 ]; then
+        echo "[svc-share-mirror] ${moved} sent, ${removed} removed"
+        # The media scanner is what makes a copied file VISIBLE to the Files
+        # app and to the picker. Without it the file is on the disk and absent
+        # from every chooser, which reads as the mirror having silently failed.
+        adb shell am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE \
+            -d "file://${DEST}" >/dev/null 2>&1 || true
     fi
+    : >"${wanted}"
     sleep "${EVERY}"
 done
