@@ -183,6 +183,7 @@ RUN chmod +x \
     /etc/s6-overlay/s6-rc.d/svc-emulator/run \
     /etc/s6-overlay/s6-rc.d/svc-adb-bridge/run \
     /etc/s6-overlay/s6-rc.d/svc-window-keeper/run \
+    /etc/s6-overlay/s6-rc.d/svc-share-mirror/run \
     /etc/s6-overlay/s6-rc.d/svc-strawknight-ready/run \
     /defaults/autostart \
     /defaults/startwm.sh

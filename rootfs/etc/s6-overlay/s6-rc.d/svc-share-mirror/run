@@ -1,0 +1,72 @@
+#!/usr/bin/with-contenv bash
+# shellcheck shell=bash
+# -----------------------------------------------------------------------------
+# svc-share-mirror - the share, visible to the phone's own file manager
+# -----------------------------------------------------------------------------
+# jdp: "kannst du den download share im Android emulator einbinden, dass ich von
+# dort aus mit dem dateimanager drauf zugriff habe?"
+#
+# MIRRORED, not mounted, and the difference is not a shortcut - it is the only
+# thing available. The emulated phone is a virtual machine with its own kernel
+# and its own disk image; a directory on the host is not reachable from inside
+# it by any mount. The emulator has no shared-folder feature, Android has no
+# SMB client in its own Files app, and an SD card image is a snapshot rather
+# than a live folder. What DOES cross the boundary is adb, so this copies.
+#
+# One direction only, host to phone, matching the share's own read-only mount.
+# The rig runs unfinished code and that code has no business writing into a
+# share full of everything else.
+#
+# Into /sdcard/Download/share, so it lands under Downloads where the stock
+# Files app looks and where the SAF picker offers it without anybody having to
+# grant a tree first.
+#
+# `adb push --sync` is what makes this cheap: it compares timestamps and sizes
+# and only sends what differs, so the steady state is one comparison every
+# thirty seconds and no traffic. Without it a 33 MB APK would be copied twice a
+# minute forever.
+# -----------------------------------------------------------------------------
+SHARE="${SHARE_DIR:-/share}"
+DEST="/sdcard/Download/share"
+EVERY="${SHARE_MIRROR_SECONDS:-30}"
+
+if [ ! -d "${SHARE}" ]; then
+    echo "[svc-share-mirror] no ${SHARE} mounted - nothing to mirror"
+    # Sleeping rather than exiting: s6 restarts a longrun that exits, so a
+    # container started without the share would spin here forever writing the
+    # same line into the log.
+    exec sleep infinity
+fi
+
+# The device has to exist before anything can be pushed to it, and a cold start
+# is minutes. Waiting here rather than failing means the mirror is simply there
+# once the phone is, without anybody having to restart a service.
+for _ in $(seq 1 180); do
+    [ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r\n')" = "1" ] && break
+    sleep 5
+done
+
+adb shell mkdir -p "${DEST}" >/dev/null 2>&1 || true
+echo "[svc-share-mirror] mirroring ${SHARE} into ${DEST} every ${EVERY}s"
+
+while :; do
+    # `.` rather than the directory name: pushing ${SHARE} itself would nest a
+    # second folder inside DEST on every run, which is the classic rsync-style
+    # trailing-slash mistake wearing adb's clothes.
+    if out="$(cd "${SHARE}" && adb push --sync . "${DEST}" 2>&1)"; then
+        # Only say something when something moved. A line every thirty seconds
+        # would bury every other service's output in the container log.
+        case "${out}" in
+            *"0 files pushed"*) : ;;
+            *) echo "[svc-share-mirror] ${out##*$'\n'}"
+               # The media scanner is what makes a copied file VISIBLE to the
+               # Files app and to the picker. Without it the file is on the
+               # disk and absent from every chooser, which reads as the mirror
+               # having silently failed.
+               adb shell am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE \
+                   -d "file://${DEST}" >/dev/null 2>&1 || true
+               ;;
+        esac
+    fi
+    sleep "${EVERY}"
+done
