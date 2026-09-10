@@ -1,0 +1,13 @@
+# Everything in this repo ends up inside a Linux container, so everything in it
+# keeps LF endings regardless of the machine it was checked out on.
+#
+# This is not a style preference. An s6 run script with CRLF endings fails as
+# "bad interpreter: /usr/bin/with-contenv bash^M" - the carriage return becomes
+# part of the interpreter's path. The container then starts, the service dies
+# instantly, s6 restarts it, and the log fills with a line that names a file
+# which plainly exists. Checking out on Windows is all it takes.
+* text=auto eol=lf
+
+# The images are bytes and must not be touched at all.
+*.png binary
+*.svg text eol=lf
