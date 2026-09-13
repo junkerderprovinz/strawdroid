@@ -6,6 +6,7 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/junkerderprovinz/strawknight/actions/workflows/build.yml"><img src="https://img.shields.io/github/actions/workflow/status/junkerderprovinz/strawknight/build.yml?branch=main&label=Build&style=for-the-badge&logo=githubactions&logoColor=white" alt="Build" height="36"></a>&nbsp;
   <a href="https://developer.android.com/about/versions/16"><img src="https://img.shields.io/badge/Android-16%20%7C%20API%2036-3ddc84?style=for-the-badge&logo=android&logoColor=white" alt="Android 16, API 36" height="36"></a>&nbsp;
   <a href="https://github.com/selkies-project/selkies"><img src="https://img.shields.io/badge/Selkies-WebRTC-393939?style=for-the-badge&logo=webrtc&logoColor=white" alt="Selkies" height="36"></a>&nbsp;
   <a href="templates/strawknight.xml"><img src="https://img.shields.io/badge/Unraid-Template-f15a2c?style=for-the-badge&logo=unraid&logoColor=white" alt="Unraid Template" height="36"></a>&nbsp;
@@ -61,8 +62,6 @@ If it has earned a place on your computer or server, a donation covers what it c
 A straw knight is the practice dummy: built in the shape of the real thing so somebody can strike at it without anybody getting hurt.
 
 This container runs the **real Android emulator** - the same AVD Android Studio starts - headless on a [Selkies](https://github.com/selkies-project/selkies) desktop. The screen arrives in a browser over WebRTC, and `adb` reaches it over the network, so Android Studio deploys and debugs on it exactly like a phone on a cable.
-
-No Community Applications listing and no Docker Hub mirror: this one is built and run on the server it lives on. The source is here so its history is somewhere other than a single folder on an array.
 
 <br>
 
@@ -122,7 +121,7 @@ docker run -d --name StrawKnight \
   -e PUID=99 -e PGID=100 \
   -p 3001:3001 -p 5555:5555 \
   -v /path/to/config:/config \
-  junkerderprovinz/strawknight:latest
+  ghcr.io/junkerderprovinz/strawknight:latest
 ```
 
 `PUID` and `PGID` decide who owns `/config`, and they should be the user that owns the directory on the host. The defaults above are Unraid's `nobody:users`; on a plain Linux box `$(id -u):$(id -g)` is usually what you want.
