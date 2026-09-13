@@ -26,9 +26,9 @@
   <a href="https://github.com/junkerderprovinz/strawknight/releases/latest/download/docker-compose.yml"><img src="https://raw.githubusercontent.com/junkerderprovinz/strawknight/main/.github/assets/download-buttons/docker-image.svg" alt="Download the docker-compose file" width="195"></a>
   &nbsp;
   <a href="https://github.com/junkerderprovinz/strawknight/archive/refs/heads/main.zip"><img src="https://raw.githubusercontent.com/junkerderprovinz/strawknight/main/.github/assets/download-buttons/source-zip.svg" alt="Download the source archive" width="195"></a>
-  <br>
-  <sub>Both download on click &middot; the image itself: <code>docker pull ghcr.io/junkerderprovinz/strawknight:latest</code> &middot; on Unraid, use the template.</sub>
 </p>
+
+<br>
 
 <p align="center">
 One knight's job: I build it, keep it running, work through the issues and add what people ask for, until nothing is missing. No accounts, no telemetry, no ads. No trial, no tier, no asterisk. Nothing readable ever leaves your own walls.
