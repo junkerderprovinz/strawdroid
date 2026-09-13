@@ -35,9 +35,21 @@ const W = 1600, H = 500;
 const LH = 420, LW = 420;
 const nameSize = 132, claimSize = 44, gap = 70, lineGap = 8;
 
+// Die Marke ist fuer hellen Grund gezeichnet, und auf dem dunklen Banner kostet
+// das die Haelfte der Zeichnung: die beiden Aehren ueber dem Helm stehen frei
+// und sind reines #1d1d1b, also unsichtbar, und die Kontur ringsum liest sich
+// nicht als Linie, sondern als Luecke zwischen Gold und Grund.
+//
+// `tinte` faerbt die dunkle Tinte deshalb nur in der dunklen Fassung um, auf
+// denselben Wert wie das Hintergrundbild des Emulators, damit Banner und Geraet
+// dieselbe Figur zeigen. `auge` bleibt dunkel: cremefarbene Augen auf Gold sind
+// keine Augen mehr.
+const TINTE_ALT = "#1d1d1b";
+
 const THEMES = [
   { suffix: "", bg: "#ffffff", name: "#1f2328", claim: "#5a5d5e" },
-  { suffix: "-dark", bg: "#0d1117", name: "#e6edf3", claim: "#9aa4ad" },
+  { suffix: "-dark", bg: "#0d1117", name: "#e6edf3", claim: "#9aa4ad",
+    tinte: "#615a49", auge: "#22201c" },
 ];
 
 async function laden(datei, url) {
@@ -84,8 +96,20 @@ function textGroups(fnt, text, fontSize, x0, y0) {
   return parts.join("");
 }
 
-function embedMark(x, y, w, h) {
-  const raw = readFileSync(MARK, "utf8").replace(/<\?xml[^>]*\?>\s*/, "");
+function embedMark(x, y, w, h, tinte, auge) {
+  let raw = readFileSync(MARK, "utf8").replace(/<\?xml[^>]*\?>\s*/, "");
+  if (tinte) {
+    // Die beiden klassenlosen Pfade zuerst: sie tragen KEIN fill-Attribut, sind
+    // also per SVG-Vorgabe schwarz, und ein Ersetzen der Farbwerte allein
+    // laesst sie unberuehrt. Es sind Koerperkontur und Strohlinien, zusammen
+    // der groesste Schwarzanteil der Zeichnung.
+    raw = raw.split("<path d=").join(`<path fill="${tinte}" d=`);
+    raw = raw.split(TINTE_ALT).join(tinte);
+    // Die Augen per style, nicht per fill: ein fill-Attribut ist eine
+    // Praesentationsangabe und steht in der SVG-Kaskade UNTER einer Regel aus
+    // dem <style>-Block, also wuerde .cls-3 es ueberstimmen.
+    raw = raw.split('<circle class="cls-3"').join(`<circle class="cls-3" style="fill:${auge}"`);
+  }
   const vb = (raw.match(/viewBox="([^"]+)"/) || [, "0 0 1000 1000"])[1];
   return raw.replace(
     /<svg\b[^>]*>/,
@@ -96,7 +120,7 @@ function embedMark(x, y, w, h) {
 for (const t of THEMES) {
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
   <rect width="${W}" height="${H}" fill="${t.bg}"/>
-  ${embedMark(LX, LY, LW, LH)}
+  ${embedMark(LX, LY, LW, LH, t.tinte, t.auge)}
   <g fill="${t.name}">${textGroups(font, NAME, nameSize, textX, nameBaseline)}</g>
   <g fill="${t.claim}">${textGroups(claimFont, CLAIM, claimSize, textX, claimBaseline)}</g>
 </svg>
