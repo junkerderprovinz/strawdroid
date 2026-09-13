@@ -54,25 +54,71 @@ FONT = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-se
 TEMPLATE = """<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {w} {h}" width="{w}" height="{h}" role="img" aria-label="{alt}">
   <title>{alt}</title>
+  <defs>
+    <clipPath id="edge">
+      <rect x="0" y="0" width="{w}" height="{h}" rx="{r}" ry="{r}"/>
+    </clipPath>
+    <linearGradient id="sheen" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0"    stop-color="#fff" stop-opacity="0"/>
+      <stop offset="0.45" stop-color="#fff" stop-opacity="0.28"/>
+      <stop offset="0.55" stop-color="#fff" stop-opacity="0.28"/>
+      <stop offset="1"    stop-color="#fff" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <style>
+    @keyframes pass {{
+      0%       {{ transform: translateX({band_start}px); }}
+      13.57%   {{ transform: translateX({band_end}px); }}
+      100%     {{ transform: translateX({band_end}px); }}
+    }}
+    /* linear, not eased: an eased pass hands off at the wrong moment and the
+       row stops reading as one band crossing both buttons. */
+    .band {{ animation: pass 7s linear {delay}s infinite; }}
+    @media (prefers-reduced-motion: reduce) {{
+      .band {{ animation: none; opacity: 0; }}
+    }}
+  </style>
   <rect width="{w}" height="{h}" rx="{r}" ry="{r}" fill="{bg}"/>
   <g transform="translate({gx} {gy}) scale({scale})" fill="{ink}">
     <path d="{path}"/>
   </g>
   <text x="238" y="110" font-family="{font}" font-size="82" font-weight="700" fill="{ink}">{head}</text>
   <text x="240" y="180" font-family="{font}" font-size="50" font-weight="400" fill="{ink}" fill-opacity="0.72">{sub_text}</text>
+  <g clip-path="url(#edge)">
+    <g class="band">
+      <!-- Taller than the canvas and started off its left edge, so the tilt
+           never exposes a corner. skewX rather than rotate: the band stays
+           axis-aligned for the translate, so the motion is one transform. -->
+      <rect x="0" y="-60" width="{band_w}" height="365.3"
+            fill="url(#sheen)" transform="skewX(-16)"/>
+    </g>
+  </g>
 </svg>
 """
 
-# slug, brand file, background, ink, heading, second line, accessible name
+# THE SHEEN is the donation buttons' own: a tilted white band, clipped to the
+# button, crossing once every seven seconds. The second button starts 0.800s
+# later so one band appears to travel the whole row rather than two bands
+# blinking independently. That step is the donation row's 0.658s scaled by the
+# width these render at, 195 against their 160.
+#
+# The geometry is scaled from the 841.9-wide coffee button: a 165-wide band on
+# 841.9 is 141 on 720, and the travel ends a band's width past the right edge
+# so nothing is left hanging in frame.
+SHEEN_W = 141.0
+SHEEN_FROM = -244.0
+SHEEN_TO = 822.0
+
+# slug, brand file, background, ink, heading, second line, accessible name, delay
 #
 # GitHub's own colour is black, and a black button without an outline vanishes
 # into GitHub's dark theme, exactly as a black macOS button did in ArrowLoop's
 # row. The slate below stays visible on both themes.
 BUTTONS = [
     ("docker-image", "docker", "#1d63ed", "#ffffff",
-     "Docker", "compose file", "Download the docker-compose file"),
+     "Docker", "compose file", "Download the docker-compose file", "0.000"),
     ("source-zip", "github", "#4d5562", "#ffffff",
-     "Source", "zip archive", "Download the source archive for this release"),
+     "Source", "zip archive", "Download the source archive for this release", "0.800"),
 ]
 
 
@@ -87,7 +133,7 @@ def brand(name):
 
 def main():
     os.makedirs(OUT, exist_ok=True)
-    for slug, mark, bg, ink, head, sub, alt in BUTTONS:
+    for slug, mark, bg, ink, head, sub, alt, delay in BUTTONS:
         path, bw, bh = brand(mark)
         # Scale on the LONGER axis so two marks of different proportions end up
         # the same optical size. Docker's is 640 wide by 512 tall, GitHub's 496
@@ -99,7 +145,9 @@ def main():
         gy = GY + (GLYPH - bh * scale) / 2
         svg = TEMPLATE.format(w=W, h=H, r=R, bg=bg, ink=ink, gx=gx, gy=gy,
                               scale=scale, path=path, font=FONT, head=head,
-                              sub_text=sub, alt=alt)
+                              sub_text=sub, alt=alt, delay=delay,
+                              band_w=SHEEN_W, band_start=SHEEN_FROM,
+                              band_end=SHEEN_TO)
         ziel = os.path.join(OUT, slug + ".svg")
         with open(ziel, "wb") as fh:
             fh.write(svg.encode("utf-8"))
