@@ -33,8 +33,18 @@ QUELLE=/defaults/android
 MARKE=/config/.strawknight-branding
 ZIEL=/data/system/users/0
 
-if [[ -f "${MARKE}" ]]; then
+# svc-strawknight-ready holds its READY line until this file appears, so that
+# the framework restart below does not happen in front of somebody who has just
+# been told the rig is ready. It is set on EVERY path out of here, the ones
+# where nothing was done included: a service that gives up silently would hold
+# the READY line for its full timeout and look like a hang.
+fertig() {
+    touch /run/strawknight-branding-done
     exec sleep infinity
+}
+
+if [[ -f "${MARKE}" ]]; then
+    fertig
 fi
 
 warte_auf_start() {
@@ -50,14 +60,14 @@ warte_auf_start() {
 adb wait-for-device >/dev/null 2>&1
 if ! warte_auf_start; then
     echo "[svc-branding] Android ist nicht hochgekommen, nichts geaendert"
-    exec sleep infinity
+    fertig
 fi
 
 # adb root is what makes the rest possible at all. On a production build it
 # fails and the service says so rather than leaving a trail of denied writes.
 if ! adb root >/dev/null 2>&1 || ! warte_auf_start; then
     echo "[svc-branding] adb root nicht moeglich, Hintergrundbild bleibt Standard"
-    exec sleep infinity
+    fertig
 fi
 
 echo "[svc-branding] Hintergrundbild und einfarbige Symbole werden gesetzt"
@@ -106,4 +116,4 @@ else
     echo "[svc-branding] Android kam nach dem Neustart nicht wieder hoch"
 fi
 
-exec sleep infinity
+fertig

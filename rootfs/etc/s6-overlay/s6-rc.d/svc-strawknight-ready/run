@@ -42,6 +42,20 @@ for _ in $(seq 1 300); do
     sleep 2
 done
 
+# svc-branding restarts the Android framework after it has written the
+# wallpaper, and on the first start of a fresh AVD that lands right about here.
+# Without this wait the log would say READY and the phone would then reboot in
+# front of whoever just read it, which is exactly what a crash looks like.
+#
+# Bounded, and deliberately: if svc-branding never runs at all, the READY line
+# still arrives, a little late, instead of never.
+if [[ "${booted}" -eq 1 ]]; then
+    for _ in $(seq 1 90); do
+        [[ -f /run/strawknight-branding-done ]] && break
+        sleep 2
+    done
+fi
+
 release="unknown"
 if [[ "${booted}" -eq 1 ]]; then
     release="$(adb shell getprop ro.build.version.release 2>/dev/null | tr -d '\r\n')"
