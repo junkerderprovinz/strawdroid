@@ -74,29 +74,32 @@ if ($has) {
 Step "KVM"
 # The device is checked, not the setting. A setting is a statement of intent;
 # /dev/kvm is the evidence.
-$kvm = (& wsl.exe -d docker-desktop -e sh -c "ls /dev/kvm >/dev/null 2>&1 && echo THERE") -join ""
-if ($kvm -match "THERE") {
-    Ok "/dev/kvm is there"
-
-    # AND IT IS NOT USABLE YET. In the WSL machine the device is root:root with
-    # mode 600, and the emulator inside the container runs as an ordinary user.
-    # The container therefore starts, the desktop serves, and the emulator
-    # prints a page about groupadd and udev rules that describes a Linux host
-    # and does not apply here. Widening the mode is the whole fix.
-    #
-    # It has to be done on every run: the WSL machine recreates the node when
-    # it restarts, and it restarts whenever Windows sleeps long enough or
-    # `wsl --shutdown` is called.
-    & wsl.exe -d docker-desktop -e sh -c "chmod 666 /dev/kvm" | Out-Null
-    $mode = (& wsl.exe -d docker-desktop -e sh -c "ls -l /dev/kvm") -join ""
-    if ($mode -match "crw-rw-rw-") { Ok "readable and writable for the container" }
-    else { Bad "could not widen /dev/kvm, the emulator will probably not start"; Say $mode }
-} else {
+# TWO THINGS HAVE TO HAPPEN, and neither is done for us.
+#
+# First, the KVM module is not loaded when the WSL machine boots, so /dev/kvm
+# does not exist at all, nested virtualisation or not. modprobe registers the
+# misc device and the node appears.
+#
+# Second, the node then belongs to root with mode 600, while the emulator
+# inside the container runs as an ordinary user. Left alone, the container
+# starts, the desktop serves, and the emulator prints a page about groupadd
+# and udev rules that describes a Linux host and does not apply here.
+#
+# Both are repeated on every run on purpose: the WSL machine is rebuilt
+# whenever Docker Desktop restarts, and everything done inside it is gone.
+& wsl.exe -d docker-desktop -e sh -c "modprobe kvm_intel 2>/dev/null || modprobe kvm_amd 2>/dev/null; chmod 666 /dev/kvm 2>/dev/null" | Out-Null
+$mode = (& wsl.exe -d docker-desktop -e sh -c "ls -l /dev/kvm 2>&1") -join ""
+if ($mode -match "crw-rw-rw-") {
+    Ok "/dev/kvm is there and open for the container"
+} elseif ($mode -match "No such file") {
     Bad "/dev/kvm is missing inside the WSL machine."
     Say "The usual causes: virtualisation is off in the BIOS, or Windows is itself"
     Say "running in a VM that does not pass VT-x through. Without KVM the emulator"
     Say "will not start."
     exit 1
+} else {
+    Bad "could not open /dev/kvm for the container; the emulator will probably not start"
+    Say $mode
 }
 
 Step "Image"

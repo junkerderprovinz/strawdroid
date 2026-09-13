@@ -115,13 +115,43 @@ jobs:
       # text in a tab instead of downloading, because raw.githubusercontent.com
       # serves it as text/plain; a release asset carries
       # Content-Disposition: attachment and therefore actually downloads.
-      - name: Attach the compose file and the start scripts to the release
+      # Built on every run rather than only on tags, so a change that breaks
+      # the launcher is caught by the ordinary build instead of surfacing on
+      # the day of a release.
+      - name: Build the launcher
+        uses: actions/setup-go@41dfa10bad2bb2ae585af6ee5bb4d7d973ad74ed # v5
+        with:
+          go-version: "1.23"
+          # go.mod, not go.sum: the launcher has no dependencies, so no go.sum
+          # is written, and setup-go fails outright on a cache path that does
+          # not exist.
+          cache-dependency-path: launcher/go.mod
+
+      - name: Cross-compile the launcher
+        run: |
+          cd launcher
+          go vet ./...
+          test -z "$(gofmt -l .)" || { gofmt -l .; echo "gofmt"; exit 1; }
+          CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -trimpath -ldflags="-s -w" \
+            -o ../strawknight-windows-amd64.exe .
+          CGO_ENABLED=0 GOOS=linux   GOARCH=amd64 go build -trimpath -ldflags="-s -w" \
+            -o ../strawknight-linux-amd64 .
+          cd ..
+          # Checksums, because the binaries are unsigned: somebody who wants to
+          # know they got what CI built has no other way to check.
+          sha256sum strawknight-windows-amd64.exe strawknight-linux-amd64 > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      - name: Attach the downloads to the release
         if: github.ref_type == 'tag'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release upload "${{ github.ref_name }}" \
             docker-compose.yml \
+            strawknight-windows-amd64.exe \
+            strawknight-linux-amd64 \
+            SHA256SUMS.txt \
             scripts/start-windows.ps1 \
             scripts/start-linux.sh \
             --clobber
