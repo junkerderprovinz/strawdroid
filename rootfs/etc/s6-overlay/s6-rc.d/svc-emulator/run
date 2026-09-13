@@ -41,11 +41,29 @@ echo "[svc-emulator] starting ${AVD_NAME} on ${DISPLAY:-:1} (gpu=${EMULATOR_GPU}
 # -no-audio: nothing here listens, and the audio device the emulator wants does
 # not exist in this container, so asking for it is one warning per start for
 # nothing.
+#
+# -no-metrics is NOT cosmetic, and this is the failure it prevents. Without it
+# the emulator printed a warning on every start, and the warning said exactly
+# what would happen next:
+#
+#   In a future release this warning will turn into a one-time blocking prompt
+#   to ask for explicit user input regarding metrics collection.
+#
+# On 2026-09-13 it did. After an earlier session had left a crash record, the
+# start logged "Showing crashdialog to get consent" and then simply stopped:
+# qemu alive, no CPU, no adb device, no boot_completed, the healthcheck red
+# forever. A dialog waiting for a click on a screen nobody is looking at is
+# indistinguishable from a hung emulator, and the log line that explains it
+# sits sixty lines above where anyone would look.
+#
+# Opting OUT rather than in, deliberately: this is a test rig that runs
+# unfinished code, and what it crashes on is nobody else's business.
 exec s6-setuidgid abc \
     "${ANDROID_SDK_ROOT}/emulator/emulator" \
     -avd "${AVD_NAME}" \
     -gpu "${EMULATOR_GPU}" \
     -no-snapshot-save \
+    -no-metrics \
     -no-audio \
     -no-boot-anim \
     -camera-back none \
