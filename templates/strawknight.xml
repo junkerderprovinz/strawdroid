@@ -4,7 +4,7 @@
   <Repository>junkerderprovinz/strawknight:latest</Repository>
   <Registry/>
   <Network>br0.20</Network>
-  <MyIP>192.168.20.49</MyIP>
+  <MyIP/>
   <MyMAC/>
   <Shell>bash</Shell>
   <Privileged>false</Privileged>
@@ -35,12 +35,12 @@
     Screen: Selkies over HTTPS on 3001. No login.&#13;
     &#13;
     Deploy from a development machine:&#13;
-      adb connect 192.168.20.49:5555&#13;
+      adb connect &lt;container-ip&gt;:5555&#13;
     Android Studio then lists it as an ordinary device and deploys and debugs on&#13;
     it exactly like a phone on a cable.&#13;
     &#13;
     Force Doze, which is the point of using a real AVD:&#13;
-      adb -s 192.168.20.49:5555 shell dumpsys deviceidle force-idle&#13;
+      adb -s &lt;container-ip&gt;:5555 shell dumpsys deviceidle force-idle&#13;
     &#13;
     Needs /dev/kvm, passed in via Extra Parameters. Bottich is bare metal, so no&#13;
     nested virtualisation is involved. Without it the emulator will not start,&#13;
@@ -62,7 +62,7 @@
   <Requires>A CPU with hardware virtualisation, and /dev/kvm present on the host.</Requires>
   <Config Name="WebUI Port (HTTPS / Selkies)" Target="3001" Default="3001" Mode="tcp" Description="The desktop the emulator draws on, over WebRTC. Self-signed certificate - accept it once. HTTPS is the default because browsers only allow seamless clipboard over HTTPS." Type="Port" Display="always" Required="true" Mask="false">3001</Config>
   <Config Name="WebUI Port (HTTP / Selkies)" Target="3000" Default="3000" Mode="tcp" Description="Optional fallback. The WebUI defaults to HTTPS on 3001." Type="Port" Display="always" Required="false" Mask="false">3000</Config>
-  <Config Name="ADB Port" Target="5555" Default="5555" Mode="tcp" Description="Reached from a development machine with: adb connect 192.168.20.49:5555 . The emulator's own adb binds to loopback, so a forwarder inside the container hands this port to it; without that the port would appear open and never complete a handshake." Type="Port" Display="always" Required="true" Mask="false">5555</Config>
+  <Config Name="ADB Port" Target="5555" Default="5555" Mode="tcp" Description="Reached from a development machine with: adb connect &lt;container-ip&gt;:5555 . The emulator's own adb binds to loopback, so a forwarder inside the container hands this port to it; without that the port would appear open and never complete a handshake." Type="Port" Display="always" Required="true" Mask="false">5555</Config>
   <Config Name="AppData (/config)" Target="/config" Default="/mnt/user/appdata/strawknight" Mode="rw" Description="The AVD itself, plus installed apps, granted permissions and anything a test wrote. The ONLY persistent mount by design. Without it every restart is a factory reset, which also throws away the folder permission an app was granted through the SAF picker - one of the things being tested." Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/strawknight</Config>
   <Config Name="Share for APKs and test files (/share)" Target="/share" Default="/mnt/user/download" Mode="ro" Description="Read-only. Drop an APK into this share from anywhere on the network and it appears ON THE DEVICE under Download/share, where the stock Files app and the SAF picker both find it - so it can be installed by tapping it on the phone, without a terminal. Mirrored rather than mounted, because an emulated phone is a virtual machine and a host directory is not reachable from inside it by any mount; the mirror compares sizes and timestamps and only sends what differs. From the container's terminal instead: sk list to see them, sk install &lt;name&gt;.apk to put one on the device, sk push &lt;file&gt; for test files. Read-only on purpose: this rig runs unfinished code, which has no business writing to a share full of everything else." Type="Path" Display="always" Required="false" Mask="false">/mnt/user/download</Config>
   <Config Name="Emulator rendering (EMULATOR_GPU)" Target="EMULATOR_GPU" Default="swiftshader_indirect" Mode="" Description="How the emulator draws. swiftshader_indirect works everywhere, including with no GPU wired in at all. 'host' is faster and is what makes scrolling read honestly, but it needs the nvidia runtime and /dev/dri - set it once the GPU is confirmed." Type="Variable" Display="always" Required="true" Mask="false">swiftshader_indirect</Config>
