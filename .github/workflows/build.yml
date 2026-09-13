@@ -115,11 +115,16 @@ jobs:
       # text in a tab instead of downloading, because raw.githubusercontent.com
       # serves it as text/plain; a release asset carries
       # Content-Disposition: attachment and therefore actually downloads.
-      - name: Attach the compose file to the release
+      - name: Attach the compose file and the start scripts to the release
         if: github.ref_type == 'tag'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release upload "${{ github.ref_name }}" docker-compose.yml --clobber
+        run: |
+          gh release upload "${{ github.ref_name }}" \
+            docker-compose.yml \
+            scripts/start-windows.ps1 \
+            scripts/start-linux.sh \
+            --clobber
 
       - name: Say where it went
         if: github.event_name != 'pull_request'

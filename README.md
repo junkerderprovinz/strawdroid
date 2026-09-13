@@ -25,6 +25,10 @@
 <p align="center">
   <a href="https://github.com/junkerderprovinz/strawknight/releases/latest/download/docker-compose.yml"><img src="https://raw.githubusercontent.com/junkerderprovinz/strawknight/main/.github/assets/download-buttons/docker-image.svg" alt="Download the docker-compose file" width="195"></a>
   &nbsp;
+  <a href="https://github.com/junkerderprovinz/strawknight/releases/latest/download/start-windows.ps1"><img src="https://raw.githubusercontent.com/junkerderprovinz/strawknight/main/.github/assets/download-buttons/windows.svg" alt="Download the Windows start script" width="195"></a>
+  &nbsp;
+  <a href="https://github.com/junkerderprovinz/strawknight/releases/latest/download/start-linux.sh"><img src="https://raw.githubusercontent.com/junkerderprovinz/strawknight/main/.github/assets/download-buttons/linux.svg" alt="Download the Linux start script" width="195"></a>
+  &nbsp;
   <a href="https://github.com/junkerderprovinz/strawknight/archive/refs/heads/main.zip"><img src="https://raw.githubusercontent.com/junkerderprovinz/strawknight/main/.github/assets/download-buttons/source-zip.svg" alt="Download the source archive" width="195"></a>
 </p>
 

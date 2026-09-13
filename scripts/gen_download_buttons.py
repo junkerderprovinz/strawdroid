@@ -114,11 +114,29 @@ SHEEN_TO = 822.0
 # GitHub's own colour is black, and a black button without an outline vanishes
 # into GitHub's dark theme, exactly as a black macOS button did in ArrowLoop's
 # row. The slate below stays visible on both themes.
+#
+# WINDOWS AND LINUX are start scripts, not builds, and the second line says so.
+# There is one image and it runs on both; what differs is the twenty lines of
+# checking in front of it. On Windows that check is the whole point: the
+# emulator needs /dev/kvm, which inside WSL2 exists only with
+# nestedVirtualization=true in a file nothing prompts you to create.
+#
+# Linux yellow is Tux's own #fcc624 and is the one bright face in the row, so
+# its ink is dark rather than white. White on that yellow fails every contrast
+# check and looks washed out next to the other three.
+#
+# The delays are spaced so one sheen appears to travel the whole row rather
+# than four appearing at once: 0.800s apart, the donation row's step scaled to
+# the width these render at.
 BUTTONS = [
     ("docker-image", "docker", "#1d63ed", "#ffffff",
      "Docker", "compose file", "Download the docker-compose file", "0.000"),
+    ("windows", "windows", "#0078d4", "#ffffff",
+     "Windows", "start script", "Download the Windows start script", "0.800"),
+    ("linux", "linux", "#fcc624", "#1b1b1b",
+     "Linux", "start script", "Download the Linux start script", "1.600"),
     ("source-zip", "github", "#4d5562", "#ffffff",
-     "Source", "zip archive", "Download the source archive for this release", "0.800"),
+     "Source", "zip archive", "Download the source archive for this release", "2.400"),
 ]
 
 

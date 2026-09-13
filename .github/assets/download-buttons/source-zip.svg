@@ -20,7 +20,7 @@
     }
     /* linear, not eased: an eased pass hands off at the wrong moment and the
        row stops reading as one band crossing both buttons. */
-    .band { animation: pass 7s linear 0.800s infinite; }
+    .band { animation: pass 7s linear 2.400s infinite; }
     @media (prefers-reduced-motion: reduce) {
       .band { animation: none; opacity: 0; }
     }

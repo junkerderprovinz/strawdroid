@@ -1,0 +1,88 @@
+#!/usr/bin/env bash
+# StrawKnight on Linux.
+#
+#   chmod +x start-linux.sh && ./start-linux.sh
+#
+# The compose file does the same thing and is the better choice if you already
+# keep a stack. This is for the other case: one command, no file to place, and
+# a check of the one thing that actually decides whether this works.
+#
+# THAT ONE THING IS /dev/kvm. Without it the container starts, the desktop
+# serves, and the phone never boots, which reads as a broken image rather than
+# as a machine that cannot nest virtual machines. So it is checked before
+# anything is downloaded, and named when it is missing.
+set -euo pipefail
+
+IMAGE="ghcr.io/junkerderprovinz/strawknight:latest"
+NAME="StrawKnight"
+PORT="${PORT:-3001}"
+ADB_PORT="${ADB_PORT:-5555}"
+
+ok()   { printf '  \033[0;32m%s\033[0m\n' "$1"; }
+bad()  { printf '  \033[0;31m%s\033[0m\n' "$1"; }
+say()  { printf '  %s\n' "$1"; }
+step() { printf '\n\033[0;36m=== %s ===\033[0m\n' "$1"; }
+
+step "Docker"
+if ! command -v docker >/dev/null 2>&1; then
+    bad "docker is not installed."
+    say "https://docs.docker.com/engine/install/"
+    exit 1
+fi
+if ! docker info >/dev/null 2>&1; then
+    bad "The Docker engine does not answer."
+    say "Is the service running, and are you in the docker group?"
+    exit 1
+fi
+ok "engine is up"
+
+step "KVM"
+if [ ! -e /dev/kvm ]; then
+    bad "/dev/kvm is missing."
+    say "Without KVM the emulator will not start. The usual causes:"
+    say "  * virtualisation is switched off in the BIOS"
+    say "  * this machine is itself a VM without nested virtualisation"
+    say "  * the module is not loaded:  sudo modprobe kvm_intel   (or kvm_amd)"
+    exit 1
+fi
+if [ ! -r /dev/kvm ] || [ ! -w /dev/kvm ]; then
+    bad "/dev/kvm exists but you cannot read and write it."
+    say "Usually a missing group:  sudo usermod -aG kvm \"\$USER\"  then log in again."
+    say "The container will start anyway, and the phone will not boot."
+fi
+ok "/dev/kvm is there"
+
+step "User"
+# PUID and PGID decide who owns /config. Get them wrong and the emulator cannot
+# write into its own AVD; it then reports "A snapshot operation is pending",
+# which reads like a corrupt device and is a permission bit.
+PUID="$(id -u)"
+PGID="$(id -g)"
+say "PUID=${PUID} PGID=${PGID}"
+
+step "Image"
+say "About 9 GB the first time."
+docker pull "$IMAGE"
+
+step "Start"
+docker rm -f "$NAME" >/dev/null 2>&1 || true
+docker run -d --name "$NAME" \
+    --device=/dev/kvm \
+    -p "${PORT}:3001" -p "${ADB_PORT}:5555" \
+    -v strawknight-config:/config \
+    --shm-size=2gb --cpus="4" --memory="8g" \
+    -e PUID="${PUID}" -e PGID="${PGID}" \
+    -e TZ="$(cat /etc/timezone 2>/dev/null || echo UTC)" \
+    -e EMULATOR_GPU=swiftshader_indirect \
+    -e EMULATOR_DEVICE=pixel_6 \
+    -e EMULATOR_RAM=2048 \
+    "$IMAGE" >/dev/null
+
+ok "started"
+echo
+say "Screen:  https://localhost:${PORT}/    (self-signed, accept it once)"
+say "Deploy:  adb connect localhost:${ADB_PORT}"
+echo
+say "The first start creates the device and takes a few minutes."
+say "Follow it with:  docker logs -f ${NAME}"
+say "Stop it with:    docker stop ${NAME}"
