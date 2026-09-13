@@ -28,10 +28,15 @@ whole repository at that tag, not the Dockerfile alone. Calling it anything
 else on the button would send somebody looking for an image to a folder of
 YAML.
 
-THE MARKS are Font Awesome Free (icons CC BY 4.0). Each is a trademark of its
-owner and is used the one way a trademark may be used without permission: to
-name the thing it points at. Both buttons link to that thing, the marks are
-unmodified, and nothing here claims endorsement by Docker or GitHub.
+THE GLYPHS are Font Awesome Free (icons CC BY 4.0), from the brands set and
+the solid one. The brand marks are trademarks of their owners and are used the
+one way a trademark may be used without permission: to name the thing they
+point at. Each button links to that thing, the marks are unmodified, and
+nothing here claims endorsement by anyone.
+
+The source button carries a ZIP glyph rather than the GitHub mark, because
+what it hands over is an archive, not a visit to GitHub. The mark named the
+host; the glyph names the file.
 
 Run from anywhere:  python scripts/gen_download_buttons.py
 Writes .github/assets/download-buttons/*.svg, which are committed.
@@ -135,7 +140,7 @@ BUTTONS = [
      "Windows", "start script", "Download the Windows start script", "0.800"),
     ("linux", "linux", "#fcc624", "#1b1b1b",
      "Linux", "start script", "Download the Linux start script", "1.600"),
-    ("source-zip", "github", "#4d5562", "#ffffff",
+    ("source-zip", "zip", "#4d5562", "#ffffff",
      "Source", "zip archive", "Download the source archive for this release", "2.400"),
 ]
 
@@ -153,9 +158,9 @@ def main():
     os.makedirs(OUT, exist_ok=True)
     for slug, mark, bg, ink, head, sub, alt, delay in BUTTONS:
         path, bw, bh = brand(mark)
-        # Scale on the LONGER axis so two marks of different proportions end up
-        # the same optical size. Docker's is 640 wide by 512 tall, GitHub's 496
-        # square; scaling on width alone would leave the square one oversized.
+        # Scale on the LONGER axis so glyphs of different proportions end up
+        # the same optical size. Docker's box is 640 by 512, the ZIP glyph's is
+        # 384 by 512; scaling on width alone would leave the narrow one huge.
         scale = GLYPH / max(bw, bh)
         # Re-centre horizontally: a wide mark scaled on its width sits left of
         # a square one at the same x.
