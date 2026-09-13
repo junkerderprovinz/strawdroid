@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <Container version="2">
   <Name>StrawKnight</Name>
-  <Repository>junkerderprovinz/strawknight:latest</Repository>
-  <Registry/>
+  <Repository>ghcr.io/junkerderprovinz/strawknight:latest</Repository>
+  <Registry>https://github.com/junkerderprovinz/strawknight/pkgs/container/strawknight</Registry>
   <Network>br0.20</Network>
   <MyIP/>
   <MyMAC/>
@@ -53,7 +53,7 @@
   <Category>Tools: Development:</Category>
   <WebUI>https://[IP]:[PORT:3001]/</WebUI>
   <TemplateURL>https://raw.githubusercontent.com/junkerderprovinz/strawknight/main/templates/strawknight.xml</TemplateURL>
-  <Icon>file:///boot/config/plugins/dockerMan/icons/strawknight.png</Icon>
+  <Icon>https://raw.githubusercontent.com/junkerderprovinz/strawknight/main/.github/assets/icon.png</Icon>
   <ExtraParams>--restart=no --device=/dev/kvm --shm-size=2gb --cpus="4" --memory="8g"</ExtraParams>
   <PostArgs/>
   <CPUset/>
