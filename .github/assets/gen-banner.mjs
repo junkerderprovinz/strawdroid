@@ -131,3 +131,21 @@ for (const t of THEMES) {
     new Resvg(svg, { background: t.bg, fitTo: { mode: "width", value: W } }).render().asPng());
   console.log(`wrote ${basis}.svg + .png`);
 }
+
+// The support thread's banner: the mark alone, centred on white, no text at
+// all. It is generated in the same run rather than kept around from an earlier
+// one, so it cannot drift away from the mark the other two show.
+{
+  const h = 420;
+  const w = h * (339.95 / 458.74);
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="${NAME}">
+  <rect width="${W}" height="${H}" fill="#ffffff"/>
+  ${embedMark((W - w) / 2, (H - h) / 2, w, h)}
+</svg>
+`;
+  const basis = `${SLUG}-banner-logo`;
+  writeFileSync(join(__dir, `${basis}.svg`), svg);
+  writeFileSync(join(__dir, `${basis}.png`),
+    new Resvg(svg, { background: "#ffffff", fitTo: { mode: "width", value: W } }).render().asPng());
+  console.log(`wrote ${basis}.svg + .png`);
+}

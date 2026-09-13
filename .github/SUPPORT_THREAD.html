@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<!--
+  Unraid Community Applications support thread for StrawKnight.
+  Structure mirrors the sister-app threads (e.g. featherdrop, Krusader):
+  title -> subtitle -> banner -> buttons -> What is this? -> Highlights ->
+  Requirements -> Posting a bug report -> Credits -> disclaimer.
+  Open standalone in a browser, or paste into the Unraid forum editor's source.
+  Title: [Support] junkerderprovinz - strawknight
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[Support] junkerderprovinz - strawknight</title>
+<style>
+  body { max-width: 900px; margin: 1.5rem auto; padding: 0 1rem;
+         font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+         line-height: 1.6; color: #1c1c1c; }
+  h1 { text-align: center; font-size: 1.7rem; margin-bottom: .2rem; }
+  .subtitle { text-align: center; color: #666; font-style: italic; margin-top: 0; }
+  h2 { margin-top: 1.9rem; font-size: 1.25rem; }
+  code { background: #f1f1f1; padding: .1em .35em; border-radius: 4px; font-size: .9em; }
+  a { color: #c79a1e; }
+  ul { padding-left: 1.2rem; }
+  li { margin: .25rem 0; }
+  img { border: 0; vertical-align: middle; }
+  hr { border: 0; border-top: 1px solid #ddd; margin: 2rem 0; }
+  .footnote { color: #777; font-size: .9em; font-style: italic; text-align: center; margin-top: 2rem; }
+</style>
+</head>
+<body>
+
+<h1>StrawKnight: a real Android emulator for Unraid</h1>
+<p class="subtitle">A phone you can break.</p>
+
+<p align="center">
+  <a href="https://github.com/junkerderprovinz/strawknight">
+    <img src="https://raw.githubusercontent.com/junkerderprovinz/strawknight/main/.github/assets/strawknight-banner-logo.png" alt="StrawKnight" width="100%">
+  </a>
+</p>
+
+<p align="center">
+  <a href="https://unraid.net/community/apps?q=strawknight"><img src="https://raw.githubusercontent.com/junkerderprovinz/strawknight/main/.github/assets/support-buttons/install-on-unraid.svg" alt="Install on Unraid" width="240"></a>
+  &nbsp;
+  <a href="https://github.com/junkerderprovinz/strawknight"><img src="https://raw.githubusercontent.com/junkerderprovinz/strawknight/main/.github/assets/support-buttons/view-on-github.svg" alt="View on GitHub" width="240"></a>
+  &nbsp;
+  <a href="https://buymeacoffee.com/junkerderprovinz"><img src="https://raw.githubusercontent.com/junkerderprovinz/strawknight/main/.github/assets/support-buttons/buy-me-a-coffee.svg" alt="Buy me a coffee" width="240"></a>
+</p>
+
+<h2>What is this?</h2>
+<p>A straw knight is the practice dummy: built in the shape of the real thing so somebody
+can strike at it without anybody getting hurt. This container runs the
+<strong>real Android emulator</strong>, the same AVD Android Studio starts, headless on a
+<a href="https://github.com/selkies-project/selkies">Selkies</a> desktop. The screen
+arrives in your browser over WebRTC and is encoded on the box's own GPU, and
+<code>adb</code> reaches it over the network, so Android Studio deploys and debugs on it
+exactly like a phone on a cable.</p>
+<p>It is deliberately <strong>not</strong> Android-in-a-container. ReDroid and Waydroid run
+the Android userspace on the host kernel: no battery, no motion sensor, no power HAL. Doze
+therefore never fires and the limits on background work never apply, so a test rig built on
+one is green because it never asks the question. A real AVD asks, and it answers on
+demand.</p>
+
+<h2>Highlights</h2>
+<ul>
+  <li><strong>Android 16, API 36</strong>, <code>google_apis</code>, x86_64. The newest level on purpose: it is the strictest about background work, and it carries Play services and a real SAF folder picker</li>
+  <li><strong>adb over the network</strong>: <code>adb connect &lt;ip&gt;:5555</code> and Android Studio lists it as an ordinary device</li>
+  <li><strong>Doze on demand</strong>, which is the whole point of a real AVD: <code>adb shell dumpsys deviceidle force-idle</code></li>
+  <li><strong>A share that reaches the phone</strong>: anything dropped into <code>/share</code> turns up on the device under <code>Download/share</code>, so a build can be installed by tapping it, without a terminal</li>
+  <li><strong>WebRTC, not VNC</strong>: judging how an app feels is judging its scrolling and its transitions, which is exactly the part a framebuffer diff smears</li>
+  <li><strong>The device arrives set up</strong>: wallpaper, dark mode, an empty home screen and monochrome icons everywhere, done once on the first boot and never written again, so anything you change afterwards is yours</li>
+  <li><strong>Persistent by design</strong>: <code>/config</code> holds the device itself, including installed apps and granted permissions, so a restart is not a factory reset</li>
+  <li>Image: <code>ghcr.io/junkerderprovinz/strawknight:latest</code></li>
+</ul>
+
+<h2>Requirements</h2>
+<ul>
+  <li>Unraid 6.10+</li>
+  <li><strong><code>/dev/kvm</code> on the host</strong>, passed in via Extra Parameters (<code>--device=/dev/kvm</code>). On bare metal it is simply there; inside a VM it needs nested virtualisation. Without it the emulator does not start, and the container log says so in as many words</li>
+  <li><strong>Memory</strong>: an emulator is a virtual machine and holds its memory whether anybody is testing or not. Measured idle, with no app installed, about 6 GB. The template caps it at 8 GB and four cores</li>
+  <li>amd64 only. The system image is x86_64, so there is nothing for an arm64 build to run</li>
+  <li>It is deliberately <strong>not</strong> set to restart on its own. Start it when it is needed and stop it after</li>
+</ul>
+
+<h2>Posting a bug report</h2>
+<p>Please post:</p>
+<ul>
+  <li>Unraid version (Settings &gt; System Information)</li>
+  <li>Image tag (<code>latest</code> or a pinned <code>vX.Y.Z</code>)</li>
+  <li>Output of <code>docker logs --tail 200 StrawKnight</code></li>
+  <li>Whether <code>/dev/kvm</code> is present on the host: <code>ls -l /dev/kvm</code></li>
+  <li>Whether you changed <code>EMULATOR_GPU</code>, <code>EMULATOR_DEVICE</code>, <code>EMULATOR_RAM</code> or the <code>/config</code> mount</li>
+</ul>
+<p>GitHub issues with the same information are just as welcome:
+<a href="https://github.com/junkerderprovinz/strawknight/issues">github.com/junkerderprovinz/strawknight/issues</a></p>
+
+<h2>Credits</h2>
+<p>Built on the <a href="https://developer.android.com/studio/run/emulator">Android emulator</a>
+and Google's system images, on
+<a href="https://github.com/linuxserver/docker-baseimage-selkies">LinuxServer's Selkies base image</a>.
+The device ships with <a href="https://github.com/LawnchairLauncher/lawnchair">Lawnchair</a>
+(Apache-2.0) and the <a href="https://github.com/Donnnno/Arcticons">Arcticons</a> icon pack
+(GPL-3.0) by Donnnno, both unmodified. <a href="https://github.com/budtmo/docker-android">budtmo/docker-android</a>
+did this first and is well kept; this one differs in putting the emulator on a
+hardware-encoded desktop rather than behind noVNC. If StrawKnight saves you a spare phone,
+you can <a href="https://buymeacoffee.com/junkerderprovinz">buy me a coffee</a>.</p>
+
+<hr>
+
+<p class="footnote">Self-hosted, AGPL-3.0 licensed. You run it, you own your data and the responsibility.</p>
+
+</body>
+</html>
