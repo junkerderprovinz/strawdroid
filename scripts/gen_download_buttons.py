@@ -14,11 +14,13 @@ keine rahmenliniehaben und farbig sein"). A filled shape in a colour somebody
 already associates with the thing does the work an outline was doing, faster:
 the eye finds "the blue one" before it reads the word.
 
-WHAT A CONTAINER REPO ACTUALLY OFFERS is not a bundle, it is an image. The
-older rule said container repos get no download row at all, on the grounds that
-a button pointing at a `docker run` line is not a download. That was right
-while there was no image to point at. There is one now, so the first button
-points at the published package, which is the thing a reader wants.
+WHAT A CONTAINER REPO ACTUALLY OFFERS is not a bundle, it is an image, and a
+browser cannot download one of those: a click on it can only open a page. So
+the first button downloads the `docker-compose.yml` instead, which IS a file
+and is the thing somebody needs in order to run the image. It is attached to
+every release, because a release asset is served with Content-Disposition
+attachment and therefore actually downloads, where a raw file in the repo would
+open as text in a tab.
 
 The second button is the source archive, and it is labelled as exactly that.
 GitHub attaches "Source code (zip)" to every release automatically: it is the
@@ -68,7 +70,7 @@ TEMPLATE = """<?xml version="1.0" encoding="UTF-8"?>
 # row. The slate below stays visible on both themes.
 BUTTONS = [
     ("docker-image", "docker", "#1d63ed", "#ffffff",
-     "Docker", "ghcr.io image", "Pull the container image from GHCR"),
+     "Docker", "compose file", "Download the docker-compose file"),
     ("source-zip", "github", "#4d5562", "#ffffff",
      "Source", "zip archive", "Download the source archive for this release"),
 ]

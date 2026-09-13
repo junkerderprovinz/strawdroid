@@ -1,0 +1,62 @@
+# StrawKnight, ready to run.
+#
+#   docker compose up -d
+#
+# Then open https://<this-host>:3001/ and accept the self-signed certificate
+# once. From a development machine: adb connect <this-host>:5555
+
+services:
+  strawknight:
+    image: ghcr.io/junkerderprovinz/strawknight:latest
+    container_name: StrawKnight
+
+    # KVM is not optional. Without it the emulator does not start, and the
+    # container log says so in as many words rather than leaving a black
+    # rectangle.
+    devices:
+      - /dev/kvm
+
+    # PUID and PGID decide who owns /config, and they have to match the user
+    # that owns the directory on the host. Get them wrong and the emulator
+    # cannot write into its own AVD; the container then reports
+    # "A snapshot operation is pending and timeout has expired", which reads
+    # like a corrupt device and is a permission bit.
+    #
+    # 99:100 is Unraid's nobody:users. On a plain Linux box, use your own:
+    #   id -u  /  id -g
+    environment:
+      PUID: "99"
+      PGID: "100"
+      TZ: "Europe/Vienna"
+      # swiftshader_indirect works everywhere, including with no GPU wired in.
+      # "host" is faster and needs the nvidia runtime plus /dev/dri.
+      EMULATOR_GPU: "swiftshader_indirect"
+      EMULATOR_DEVICE: "pixel_6"
+      EMULATOR_RAM: "2048"
+
+    ports:
+      - "3001:3001"   # the desktop, over HTTPS
+      - "5555:5555"   # adb
+
+    volumes:
+      # The AVD itself, plus installed apps and granted permissions. The only
+      # persistent mount by design: without it every restart is a factory
+      # reset.
+      - ./config:/config
+      # Optional, read-only. An APK dropped in here shows up ON THE DEVICE
+      # under Download/share, so it can be installed by tapping it.
+      # - /path/to/downloads:/share:ro
+
+    shm_size: "2gb"
+
+    # An emulator is a virtual machine and holds its memory whether anybody is
+    # testing or not: measured idle, with no app installed, about 6 GB.
+    deploy:
+      resources:
+        limits:
+          cpus: "4"
+          memory: 8g
+
+    # Deliberately not "unless-stopped". Start it when it is needed, stop it
+    # after.
+    restart: "no"

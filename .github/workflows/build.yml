@@ -19,7 +19,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write   # release asset upload
   packages: write
 
 concurrency:
@@ -108,6 +108,18 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           provenance: false
+
+      # The download button in the README points at
+      # releases/latest/download/docker-compose.yml, and that URL only resolves
+      # if the file is a release ASSET. A raw file in the repo would open as
+      # text in a tab instead of downloading, because raw.githubusercontent.com
+      # serves it as text/plain; a release asset carries
+      # Content-Disposition: attachment and therefore actually downloads.
+      - name: Attach the compose file to the release
+        if: github.ref_type == 'tag'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload "${{ github.ref_name }}" docker-compose.yml --clobber
 
       - name: Say where it went
         if: github.event_name != 'pull_request'
