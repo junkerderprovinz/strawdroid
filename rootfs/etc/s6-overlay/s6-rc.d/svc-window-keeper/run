@@ -36,7 +36,35 @@ done
 AVD_NAME="${AVD_NAME:-strawknight}"
 TITLE="Android Emulator - ${AVD_NAME}"
 
+# The wallpaper is painted once, by the desktop session, and feh writes a
+# pixmap of exactly the size the screen had at that moment. When Selkies then
+# resizes the display to the browser window, nothing repaints it: the new area
+# is whatever X had underneath, which is white, and the image itself is
+# stretched across a ratio it was not made for. Found on a README screenshot,
+# where the desktop around the phone was a white field with the hint sentence
+# pulled apart to the two far edges.
+#
+# This loop already asks for the screen size every couple of seconds, so it is
+# the cheapest place to notice the change. Repainted only WHEN it changes, never
+# on the regular pass, so somebody who set their own background keeps it until
+# the next resize.
+letzte=""
+neu_zeichnen() {
+    xsetroot -solid '#161616' 2>/dev/null || true
+    if command -v feh >/dev/null 2>&1 && [ -f /usr/local/share/strawknight-wallpaper.png ]; then
+        feh --no-fehbg --bg-max --image-bg '#161616' \
+            /usr/local/share/strawknight-wallpaper.png 2>/dev/null || true
+    fi
+}
+
 while :; do
+    read -r sw sh <<<"$(xdpyinfo | awk '/dimensions:/ { split($2, d, "x"); print d[1], d[2] }')"
+    if [ -n "${sw}" ] && [ "${sw}x${sh}" != "${letzte}" ]; then
+        [ -n "${letzte}" ] && echo "[svc-window-keeper] screen is now ${sw}x${sh}, repainting the background"
+        letzte="${sw}x${sh}"
+        neu_zeichnen
+    fi
+
     id="$(wmctrl -l | awk -v t="${TITLE}" 'index($0, t) { print $1; exit }')"
     if [ -n "${id}" ]; then
         # Geometry of that window, and of the screen it lives on.
@@ -45,7 +73,6 @@ while :; do
         h="$(echo "${geo}" | awk '/Height:/ { print $2 }')"
         x="$(echo "${geo}" | awk '/Absolute upper-left X:/ { print $NF }')"
         y="$(echo "${geo}" | awk '/Absolute upper-left Y:/ { print $NF }')"
-        read -r sw sh <<<"$(xdpyinfo | awk '/dimensions:/ { split($2, d, "x"); print d[1], d[2] }')"
 
         if [ -n "${w}" ] && [ -n "${sw}" ]; then
             # Outside means any edge past the screen. A window taller than the

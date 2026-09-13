@@ -76,11 +76,19 @@ This container runs the **real Android emulator** - the same AVD Android Studio 
 ## 2. Screenshots
 
 <p align="center">
-  <img src=".github/assets/screenshots/emulator.png" alt="The emulator window on the Selkies desktop" width="380">
+  <img src=".github/assets/screenshots/desktop.png" alt="The emulator window on the Selkies desktop, seen in a browser" width="45%">
+  <br><em>Android 16 on the Selkies desktop, in a browser. The strip on the right is the emulator's own toolbar, not part of the phone.</em>
 </p>
 
+<br>
+
 <p align="center">
-  <sub>Android 16 on the Selkies desktop, running in a browser. The toolbar on the right is the emulator's own.</sub>
+  <img src=".github/assets/screenshots/all-apps.png" alt="The app drawer on the emulated device" width="26%">
+  &nbsp;
+  <img src=".github/assets/screenshots/share.png" alt="The share folder on the device, holding an APK" width="26%">
+  &nbsp;
+  <img src=".github/assets/screenshots/about.png" alt="Android 16, API 36, reported by the device itself" width="26%">
+  <br><em>The app drawer, with an APK installed over adb. Anything dropped into <code>/share</code> turns up under <code>Download/share</code>, so a build can be installed by tapping it. And the device says what it is: Android 16, API 36.</em>
 </p>
 
 <br>
@@ -186,6 +194,8 @@ There is a **cap**, and on Unraid it matters: the share this is usually pointed 
 `/config` only, and it holds the AVD itself: installed apps, granted permissions, anything a test wrote. That is not tidiness. Rebuilding the device on every start would silently reset the folder permission an app was granted through the SAF picker, which is one of the things being tested, and it would look like the app forgetting.
 
 The device profile and the emulated RAM are therefore read on **first boot only**. Changing them later needs the AVD removed from `/config/.android/avd`.
+
+The wallpaper and the monochrome icons are set the same way, once, on the first boot of a new AVD. A marker in `/config` stops them from being written again, so a wallpaper you pick yourself afterwards is yours and stays.
 
 <br>
 
