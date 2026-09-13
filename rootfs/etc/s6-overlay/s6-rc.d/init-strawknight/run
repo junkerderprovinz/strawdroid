@@ -91,7 +91,22 @@ else
     log "AVD created"
 fi
 
-chown -R "${PUID:-99}:${PGID:-100}" \
+# chown to `abc`, the user the emulator actually runs as, NOT to a hardcoded
+# fallback. The base image remaps abc to PUID:PGID in init-adduser, so this is
+# the same thing on Unraid and the right thing everywhere else.
+#
+# The old line read `${PUID:-99}:${PGID:-100}` and only agreed with reality
+# because Unraid always sets PUID=99. A plain `docker run` without it left the
+# AVD directory owned by 99 while svc-emulator ran as abc, uid 911. The
+# emulator then could not write qemu-version.txt, its first start died, and
+# every restart after that hit the leftover lock:
+#
+#   FATAL | A snapshot operation for 'strawknight' is pending and timeout has
+#           expired. Exiting...
+#
+# which reads like a corrupt AVD and is a permission bit. Measured on
+# 2026-09-13 with the docker run command the README documents.
+chown -R abc:abc \
     "${CONFIG_HOME}" "/config/.local" "/config/.cache" "/config/.android" 2>/dev/null || true
 
 log "init-strawknight done"

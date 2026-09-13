@@ -27,11 +27,17 @@ export GDK_BACKEND="${GDK_BACKEND:-x11}"
 # The wallpaper carries a line saying the phone may still be booting. Without
 # it, the thirty to ninety seconds before the emulator window appears is a black
 # rectangle, which is indistinguishable from a container that failed to start.
+#
+# --bg-max, not --bg-fill. Selkies resizes the desktop to whatever the browser
+# window is, so the ratio is never the image's. `--bg-fill` covers by cropping,
+# and on the first README screenshot that cut the mark in half and pushed the
+# sentence off the right edge. `--bg-max` fits the whole image and pays for the
+# leftover with --image-bg, which is the same colour as the fallback below, so
+# the seam is invisible.
+xsetroot -solid '#161616' 2>/dev/null || true
 if command -v feh >/dev/null 2>&1 && [ -f /usr/local/share/strawknight-wallpaper.png ]; then
-    feh --no-fehbg --bg-fill /usr/local/share/strawknight-wallpaper.png 2>/dev/null \
-        || xsetroot -solid '#161616' 2>/dev/null || true
-else
-    xsetroot -solid '#161616' 2>/dev/null || true
+    feh --no-fehbg --bg-max --image-bg '#161616' \
+        /usr/local/share/strawknight-wallpaper.png 2>/dev/null || true
 fi
 
 # Bind a complete keymap so Shift resolves for pasted text. The Selkies base

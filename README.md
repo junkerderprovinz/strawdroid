@@ -41,6 +41,21 @@ If it has earned a place on your computer or server, a donation covers what it c
 
 <br>
 
+## Table of Contents
+
+1. [What it is](#1-what-it-is)
+2. [Screenshots](#2-screenshots)
+3. [Why not Android-in-a-container](#3-why-not-android-in-a-container)
+4. [Why not budtmo/docker-android](#4-why-not-budtmodocker-android)
+5. [Which Android](#5-which-android)
+6. [Running it](#6-running-it)
+7. [Using it](#7-using-it)
+8. [What persists](#8-what-persists)
+9. [Two things worth knowing](#9-two-things-worth-knowing)
+10. [Support this project](#10-support-this-project)
+
+<br>
+
 ## 1. What it is
 
 A straw knight is the practice dummy: built in the shape of the real thing so somebody can strike at it without anybody getting hurt.
@@ -51,7 +66,19 @@ No Community Applications listing and no Docker Hub mirror: this one is built an
 
 <br>
 
-## 2. Why not Android-in-a-container
+## 2. Screenshots
+
+<p align="center">
+  <img src=".github/assets/screenshots/emulator.png" alt="The emulator window on the Selkies desktop" width="380">
+</p>
+
+<p align="center">
+  <sub>Android 16 on the Selkies desktop, running in a browser. The toolbar on the right is the emulator's own.</sub>
+</p>
+
+<br>
+
+## 3. Why not Android-in-a-container
 
 ReDroid and Waydroid run the Android userspace directly on the host kernel. They are lighter, they need no KVM, and for testing a layout they are fine.
 
@@ -65,7 +92,7 @@ adb shell dumpsys deviceidle force-idle
 
 <br>
 
-## 3. Why not budtmo/docker-android
+## 4. Why not budtmo/docker-android
 
 [budtmo/docker-android](https://github.com/budtmo/docker-android) does the same job and is well kept, on a monthly release cadence. Its screen is x11vnc behind noVNC: a framebuffer diff over websockets, with no hardware encoding.
 
@@ -73,7 +100,7 @@ Judging how an app *feels* is judging its scrolling and its transitions, which i
 
 <br>
 
-## 4. Which Android
+## 5. Which Android
 
 **16, API 36, `google_apis`, x86_64**, and the level is the newest on purpose.
 
@@ -85,17 +112,20 @@ Only one level is installed, and that has a consequence: an AVD in the persisten
 
 <br>
 
-## 5. Running it
+## 6. Running it
 
 Needs `/dev/kvm`. On bare metal that is simply there; no nested virtualisation is involved. Without it the emulator does not start, and the container log says so in as many words rather than leaving a black rectangle.
 
 ```
 docker run -d --name StrawKnight \
   --device=/dev/kvm --shm-size=2gb --cpus="4" --memory="8g" \
+  -e PUID=99 -e PGID=100 \
   -p 3001:3001 -p 5555:5555 \
   -v /path/to/config:/config \
   junkerderprovinz/strawknight:latest
 ```
+
+`PUID` and `PGID` decide who owns `/config`, and they should be the user that owns the directory on the host. The defaults above are Unraid's `nobody:users`; on a plain Linux box `$(id -u):$(id -g)` is usually what you want.
 
 On Unraid use [`templates/strawknight.xml`](templates/strawknight.xml), which puts it on its own IP so no port mapping is needed.
 
@@ -103,7 +133,7 @@ On Unraid use [`templates/strawknight.xml`](templates/strawknight.xml), which pu
 
 <br>
 
-## 6. Using it
+## 7. Using it
 
 | | |
 |---|---|
@@ -144,7 +174,7 @@ There is a **cap**, and on Unraid it matters: the share this is usually pointed 
 
 <br>
 
-## 7. What persists
+## 8. What persists
 
 `/config` only, and it holds the AVD itself: installed apps, granted permissions, anything a test wrote. That is not tidiness. Rebuilding the device on every start would silently reset the folder permission an app was granted through the SAF picker, which is one of the things being tested, and it would look like the app forgetting.
 
@@ -152,7 +182,7 @@ The device profile and the emulated RAM are therefore read on **first boot only*
 
 <br>
 
-## 8. Two things worth knowing
+## 9. Two things worth knowing
 
 **The ADB port is forwarded, not bound.** The emulator's own adb daemon listens on loopback and nothing else. A forwarder inside the container hands the outside port to it. Without that, the port looks open from a development machine and the handshake never completes, which reads as a network problem and is not one.
 
@@ -160,7 +190,7 @@ The device profile and the emulated RAM are therefore read on **first boot only*
 
 <br>
 
-## 9. Support this project
+## 10. Support this project
 
 Problems, wishes or suggestions? You're welcome to [open an issue](https://github.com/junkerderprovinz/strawknight/issues).
 
