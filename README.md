@@ -1,8 +1,19 @@
-<h1 align="center">StrawKnight</h1>
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/junkerderprovinz/strawknight/main/.github/assets/strawknight-banner-dark.png">
+    <img src="https://raw.githubusercontent.com/junkerderprovinz/strawknight/main/.github/assets/strawknight-banner.png" alt="StrawKnight" width="100%">
+  </picture>
+</p>
 
 <p align="center">
-  <img src=".github/assets/icon.png" width="128" alt="StrawKnight">
+  <a href="https://developer.android.com/about/versions/16"><img src="https://img.shields.io/badge/Android-16%20%7C%20API%2036-3ddc84?style=for-the-badge&logo=android&logoColor=white" alt="Android 16, API 36" height="36"></a>&nbsp;
+  <a href="https://github.com/selkies-project/selkies"><img src="https://img.shields.io/badge/Selkies-WebRTC-393939?style=for-the-badge&logo=webrtc&logoColor=white" alt="Selkies" height="36"></a>&nbsp;
+  <a href="templates/strawknight.xml"><img src="https://img.shields.io/badge/Unraid-Template-f15a2c?style=for-the-badge&logo=unraid&logoColor=white" alt="Unraid Template" height="36"></a>&nbsp;
+  <a href="https://github.com/junkerderprovinz/strawknight/releases/latest"><img src="https://img.shields.io/github/v/release/junkerderprovinz/strawknight?style=for-the-badge&logo=github&logoColor=white&label=Release" alt="Release" height="36"></a>&nbsp;
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-AGPL--3.0-blue?style=for-the-badge&logo=gnu&logoColor=white" alt="License: AGPL-3.0" height="36"></a>
 </p>
+
+<br>
 
 <p align="center">
   A real Android emulator on a Selkies desktop, so an app can be installed, driven and broken without an APK ever touching a phone.
