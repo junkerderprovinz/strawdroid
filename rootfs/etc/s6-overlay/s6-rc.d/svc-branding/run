@@ -113,12 +113,25 @@ adb shell "settings put secure theme_customization_overlay_packages '${JSON}'"
 # suggestions are noise rather than a feature.
 adb shell pm disable-user --user 0 com.google.android.as >/dev/null 2>&1 || true
 
-# The launcher keeps its preferences in memory and writes them out when it
-# stops, so it has to be stopped before the file is touched.
+# Dark mode, and it is not a matter of taste here. A fresh AVD starts in light
+# mode, and themed icons in light mode are dark glyphs on pale circles: still
+# themed, but the opposite of what the wallpaper was drawn for.
+adb shell cmd uimode night yes >/dev/null 2>&1 || true
+
+# The launcher keeps its preferences and its layout in memory and writes both
+# out when it stops, so it has to be stopped before either is touched.
 PREFS=/data/data/com.google.android.apps.nexuslauncher/shared_prefs/com.android.launcher3.prefs.xml
+DB=/data/data/com.google.android.apps.nexuslauncher/databases/launcher_4_by_5.db
 adb shell am force-stop com.google.android.apps.nexuslauncher >/dev/null 2>&1
 sleep 2
 adb shell "grep -q themed_icons ${PREFS} 2>/dev/null || sed -i 's#</map>#    <boolean name=\"themed_icons\" value=\"true\" />\n</map>#' ${PREFS}" >/dev/null 2>&1
+
+# Clear the home screen. A fresh device puts Gmail, Photos and YouTube on it,
+# none of which this rig is for, and they are real rows rather than
+# suggestions: container -100 is the workspace, -101 the dock, and the dock
+# keeps what it has. The wallpaper carries the mark, and nothing should sit on
+# top of it that nobody asked for.
+adb shell "sqlite3 ${DB} 'delete from favorites where container = -100;'" >/dev/null 2>&1 || true
 
 # The framework reads all of this at startup, so it gets one. This costs about
 # forty seconds and happens exactly once in the life of an AVD.
