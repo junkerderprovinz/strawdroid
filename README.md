@@ -25,9 +25,9 @@
 <p align="center">
   <a href="https://github.com/junkerderprovinz/strawknight/releases/latest/download/docker-compose.yml"><img src="https://raw.githubusercontent.com/junkerderprovinz/strawknight/main/.github/assets/download-buttons/docker-image.svg" alt="Download the docker-compose file" width="195"></a>
   &nbsp;
-  <a href="https://github.com/junkerderprovinz/strawknight/releases/latest/download/strawknight-windows-amd64.exe"><img src="https://raw.githubusercontent.com/junkerderprovinz/strawknight/main/.github/assets/download-buttons/windows.svg" alt="Download the Windows launcher" width="195"></a>
+  <a href="https://github.com/junkerderprovinz/strawknight/releases/latest/download/start-windows.ps1"><img src="https://raw.githubusercontent.com/junkerderprovinz/strawknight/main/.github/assets/download-buttons/windows.svg" alt="Download the Windows start script" width="195"></a>
   &nbsp;
-  <a href="https://github.com/junkerderprovinz/strawknight/releases/latest/download/strawknight-linux-amd64"><img src="https://raw.githubusercontent.com/junkerderprovinz/strawknight/main/.github/assets/download-buttons/linux.svg" alt="Download the Linux launcher" width="195"></a>
+  <a href="https://github.com/junkerderprovinz/strawknight/releases/latest/download/start-linux.sh"><img src="https://raw.githubusercontent.com/junkerderprovinz/strawknight/main/.github/assets/download-buttons/linux.svg" alt="Download the Linux start script" width="195"></a>
   &nbsp;
   <a href="https://github.com/junkerderprovinz/strawknight/archive/refs/heads/main.zip"><img src="https://raw.githubusercontent.com/junkerderprovinz/strawknight/main/.github/assets/download-buttons/source-zip.svg" alt="Download the source archive" width="195"></a>
 </p>
@@ -152,11 +152,11 @@ On Unraid use [`templates/strawknight.xml`](templates/strawknight.xml), which pu
 
 ### On Windows and on a desktop Linux
 
-The two launchers at the top are the short way in. They check the one thing that decides whether this works, start the container, and then get out of the way. They are not the product: the payload is a Linux image that needs KVM, so Docker is required either way.
+The two start scripts at the top are the short way in. They check the one thing that decides whether this works, start the container, and then get out of the way. They are not the product: the payload is a Linux image that needs KVM, so Docker is required either way.
 
 On Windows the checking is the point. The container runs inside the WSL2 machine, so KVM has to work inside a VM. That needs `nestedVirtualization=true` in `%USERPROFILE%\.wslconfig`, a file nothing prompts you to create. Even then the KVM module is not loaded when that machine boots, so `/dev/kvm` does not exist until something loads it, and when it appears it belongs to root with mode 600 while the emulator runs as an ordinary user. All three are handled on every run, because Docker Desktop rebuilds the WSL machine whenever it restarts.
 
-**The binaries are not code-signed.** Windows SmartScreen will therefore say "Windows protected your PC" on first run: choose *More info* and then *Run anyway*. Some antivirus engines also flag small unsigned executables that start other programs, which is exactly what this one does. If you would rather not run an unsigned binary, the same steps are in [`scripts/start-windows.ps1`](scripts/start-windows.ps1) and [`scripts/start-linux.sh`](scripts/start-linux.sh), which are attached to every release and are plain text you can read first. `SHA256SUMS.txt` on the release lets you check that a download is what the build produced.
+On Windows, right-click [`start-windows.ps1`](scripts/start-windows.ps1) and choose *Run with PowerShell*; if the execution policy stops it, `powershell -ExecutionPolicy Bypass -File start-windows.ps1` runs it once without changing anything. On Linux, `chmod +x start-linux.sh && ./start-linux.sh`. Both are plain text: read them before you run them.
 
 <br>
 
