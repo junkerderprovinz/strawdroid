@@ -91,11 +91,27 @@ adb shell chmod 700 "${ZIEL}/wallpaper_orig"
 adb shell restorecon "${ZIEL}/wallpaper" "${ZIEL}/wallpaper_orig" \
                      "${ZIEL}/wallpaper_info.xml" >/dev/null 2>&1
 
-# MONOCHROMATIC is what makes the icons white rather than tinted. themed_icon
-# alone turns them into one colour, and that colour is derived from the
-# wallpaper, which on this picture lands on pink.
-JSON='{"_applied_timestamp":1,"android.theme.customization.color_source":"home_wallpaper","android.theme.customization.color_index":"1","android.theme.customization.theme_style":"MONOCHROMATIC","android.theme.customization.color_both":"1","android.theme.customization.themed_icon":"1"}'
+# Three keys, and each one fixes a different half-measure.
+#
+# themed_icon alone makes the icons ONE colour, not white: the colour is
+# derived from the wallpaper, and on this picture it first landed on pink.
+#
+# MONOCHROMATIC drops the saturation but not the hue, because the seed is still
+# the wallpaper. The result was a cool blue-grey, which is not what anybody
+# means by white.
+#
+# color_source=preset with a white system_palette takes the wallpaper out of it
+# altogether, and only then are the icons actually neutral.
+JSON='{"_applied_timestamp":2,"android.theme.customization.color_source":"preset","android.theme.customization.system_palette":"FFFFFF","android.theme.customization.accent_color":"FFFFFF","android.theme.customization.theme_style":"MONOCHROMATIC","android.theme.customization.color_both":"1","android.theme.customization.themed_icon":"1"}'
 adb shell "settings put secure theme_customization_overlay_packages '${JSON}'"
+
+# The launcher puts a predicted app on the home screen, above the dock, and on
+# a fresh device that is Google Photos. It is not a row in the launcher
+# database, so deleting it there does nothing: it is drawn from the prediction
+# service and comes straight back. Switching that service off is what removes
+# it, and on a rig whose job is to run somebody's app under test, on-device
+# suggestions are noise rather than a feature.
+adb shell pm disable-user --user 0 com.google.android.as >/dev/null 2>&1 || true
 
 # The launcher keeps its preferences in memory and writes them out when it
 # stops, so it has to be stopped before the file is touched.
