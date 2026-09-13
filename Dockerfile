@@ -163,6 +163,43 @@ ENV ANDROID_AVD_HOME=/config/.android/avd \
     ANDROID_USER_HOME=/config/.android
 
 # ---------------------------------------------------------------------------
+# The launcher on the emulated device, and its icons
+# ---------------------------------------------------------------------------
+# WHY A DIFFERENT LAUNCHER AT ALL. The stock Pixel Launcher cannot do two
+# things this rig wants. Its search bar has no switch, and its themed icons
+# reach the home screen and the dock but not the app drawer, which keeps the
+# original colours. It also reads no icon packs: that is a launcher feature,
+# not an Android one, and Pixel Launcher never implemented it.
+#
+# FETCHED AT BUILD TIME, NOT COMMITTED. Together these are about ninety
+# megabytes, which has no business in a git repository. The versions are
+# pinned and both downloads are checked against a digest, so a build either
+# gets exactly what was tested or fails.
+#
+# Lawnchair is Apache-2.0, Arcticons is GPL-3.0. Both ship unmodified,
+# alongside the image rather than linked into it, and both are credited in the
+# README with a pointer to their source.
+# Lawnchair's asset name does not follow its tag - the tag is v15.0.0-beta3.0
+# and the file is Lawnchair.15.0.0.Beta.3.0.apk - so both are named here
+# instead of one being derived from the other. Deriving it would produce a URL
+# that looks right and 404s on the next version bump.
+ARG LAWNCHAIR_TAG=v15.0.0-beta3.0
+ARG LAWNCHAIR_FILE=Lawnchair.15.0.0.Beta.3.0.apk
+ARG LAWNCHAIR_SHA=d4200d0985169fd79ba1bd225d653f2a2fe7b50aa07cb0d05ca64c7623f86059
+ARG ARCTICONS_VERSION=15.0.5
+ARG ARCTICONS_SHA=1bca18ec58c75f8a30a301996a403330e1e2ccab7df325aeb5f7e941dc5b79fe
+
+RUN set -eux; \
+    mkdir -p /defaults/apk; \
+    curl -fsSL -o /defaults/apk/lawnchair.apk \
+      "https://github.com/LawnchairLauncher/lawnchair/releases/download/${LAWNCHAIR_TAG}/${LAWNCHAIR_FILE}"; \
+    echo "${LAWNCHAIR_SHA}  /defaults/apk/lawnchair.apk" | sha256sum -c -; \
+    curl -fsSL -o /defaults/apk/arcticons.apk \
+      "https://github.com/Donnnno/Arcticons/releases/download/${ARCTICONS_VERSION}/Arcticons-${ARCTICONS_VERSION}-normal-release.apk"; \
+    echo "${ARCTICONS_SHA}  /defaults/apk/arcticons.apk" | sha256sum -c -; \
+    ls -l /defaults/apk
+
+# ---------------------------------------------------------------------------
 # Skeleton configs and s6-overlay init scripts
 # ---------------------------------------------------------------------------
 COPY rootfs/ /

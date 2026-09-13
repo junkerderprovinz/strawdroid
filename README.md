@@ -219,6 +219,19 @@ The wallpaper and the monochrome icons are set the same way, once, on the first 
 
 <br>
 
+### What is on the device, and where it came from
+
+The device is set up once, on the first boot of a new AVD, and then left alone: wallpaper, dark mode, an empty home screen, and a launcher whose icons are monochrome everywhere rather than only on the home screen. A marker in `/config` stops any of it being written a second time, so a wallpaper or a layout you set yourself is yours and stays.
+
+Two of those pieces are other people's work, shipped unmodified alongside the image and pinned to an exact version, which the build verifies by digest:
+
+- **[Lawnchair](https://github.com/LawnchairLauncher/lawnchair)**, Apache-2.0. The stock Pixel Launcher has no switch for its search bar, and its themed icons reach the home screen and the dock but not the app drawer. It also reads no icon packs, which is a launcher feature rather than an Android one.
+- **[Arcticons](https://github.com/Donnnno/Arcticons)** by Donnnno, GPL-3.0. The white line icons, which is what makes the drawer match the rest.
+
+Neither is required to use the emulator. If the launcher fails to install, the log says so and the device keeps the stock one.
+
+<br>
+
 ## 10. Support this project
 
 Problems, wishes or suggestions? You're welcome to [open an issue](https://github.com/junkerderprovinz/strawknight/issues).

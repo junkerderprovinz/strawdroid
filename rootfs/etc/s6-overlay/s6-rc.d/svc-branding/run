@@ -30,6 +30,7 @@
 # their own wallpaper afterwards keeps their choice.
 # -----------------------------------------------------------------------------
 QUELLE=/defaults/android
+APK=/defaults/apk
 MARKE=/config/.strawknight-branding
 ZIEL=/data/system/users/0
 
@@ -133,12 +134,138 @@ adb shell "grep -q themed_icons ${PREFS} 2>/dev/null || sed -i 's#</map>#    <bo
 # top of it that nobody asked for.
 adb shell "sqlite3 ${DB} 'delete from favorites where container = -100;'" >/dev/null 2>&1 || true
 
+# ---------------------------------------------------------------------------
+# The launcher, and the icons in it
+# ---------------------------------------------------------------------------
+# Everything above makes the Pixel Launcher as good as it gets, and it stops
+# two steps short: its search bar has no switch, and its themed icons reach the
+# home screen and the dock but not the app drawer. Lawnchair does both, and it
+# reads icon packs, which is a launcher feature rather than an Android one.
+#
+# The settings are RESTORED rather than set. Lawnchair keeps them in a
+# DataStore and a launcher database, with no command-line way in, so they were
+# made once by hand and the four files kept - the same approach as the
+# wallpaper, and for the same reason.
+if [[ -f "${APK}/lawnchair.apk" ]]; then
+    echo "[svc-branding] Launcher und Symbole"
+    adb install -r -g "${APK}/lawnchair.apk" >/dev/null 2>&1
+    adb install -r "${APK}/arcticons.apk" >/dev/null 2>&1
+
+    if adb shell pm list packages 2>/dev/null | grep -q "app.lawnchair"; then
+        # STARTED ONCE BEFORE ANYTHING IS RESTORED. A freshly installed app has
+        # no databases directory at all: it is created the first time the app
+        # writes. Copying into it beforehand fails on every file, and the first
+        # attempt did exactly that while still reporting success.
+        #
+        # Letting the app create the directory itself also gets the ownership
+        # and the SELinux context right without this script having to know what
+        # they should be.
+        #
+        # STARTED BY ITS ACTIVITY, not with the HOME key. HOME starts whichever
+        # launcher is currently the default, and at this point that is still the
+        # stock one - so Lawnchair never ran, never created its directory, and
+        # all four copies failed. That cost three runs before the log said
+        # "0 von 4" out loud.
+        adb shell am start -n app.lawnchair/app.lawnchair.LawnchairLauncher >/dev/null 2>&1
+        for _ in $(seq 1 30); do
+            adb shell "test -d /data/data/app.lawnchair/databases" >/dev/null 2>&1 && break
+            sleep 2
+        done
+        adb shell am force-stop app.lawnchair >/dev/null 2>&1
+        sleep 3
+
+        besitzer="$(adb shell stat -c '%U:%G' /data/data/app.lawnchair 2>/dev/null | tr -d '\r\n')"
+
+        # FOUR FILES IN THREE PLACES, and finding the right ones took a detour
+        # worth recording. The settings are NOT in databases/preferences, which
+        # is what the name suggests and what got restored first: they are in
+        # files/datastore/preferences.preferences_pb, all 264 bytes of it. The
+        # layout restored correctly from the database while every setting was
+        # quietly ignored, which looked like the restore failing when it was
+        # the wrong file succeeding.
+        #
+        # The SQLite side files are deliberately NOT shipped. A -wal and a -shm
+        # from one moment paired with a main file from another is a rollback
+        # waiting to happen; they are removed instead so SQLite rebuilds them.
+        kopiert=0
+        gesamt=0
+        restore_one() {
+            local datei="$1" ziel="$2"
+            [[ -f "${QUELLE}/lawnchair/${datei}" ]] || return 0
+            gesamt=$((gesamt + 1))
+            adb push "${QUELLE}/lawnchair/${datei}" "/data/local/tmp/${datei}" >/dev/null 2>&1
+            if adb shell cp "/data/local/tmp/${datei}" "${ziel}/${datei}" >/dev/null 2>&1; then
+                kopiert=$((kopiert + 1))
+                [[ -n "${besitzer}" ]] && adb shell chown "${besitzer}" "${ziel}/${datei}"
+                adb shell restorecon "${ziel}/${datei}" >/dev/null 2>&1
+            fi
+            adb shell rm -f "/data/local/tmp/${datei}"
+        }
+
+        adb shell mkdir -p /data/data/app.lawnchair/files/datastore >/dev/null 2>&1
+        restore_one preferences.preferences_pb          /data/data/app.lawnchair/files/datastore
+        restore_one launcher_5_4_4.db                   /data/data/app.lawnchair/databases
+        restore_one com.android.launcher3.prefs.xml     /data/data/app.lawnchair/shared_prefs
+        restore_one com.android.launcher3.device.prefs.xml /data/data/app.lawnchair/shared_prefs
+
+        adb shell rm -f /data/data/app.lawnchair/databases/preferences-wal \
+                        /data/data/app.lawnchair/databases/preferences-shm \
+                        /data/data/app.lawnchair/databases/launcher_5_4_4.db-journal >/dev/null 2>&1
+
+        # Counted rather than assumed. An early version announced success while
+        # every single copy had failed, which is the one thing a setup step must
+        # never do.
+        if [[ "${kopiert}" -ne "${gesamt}" ]]; then
+            echo "[svc-branding] Lawnchair: nur ${kopiert} von ${gesamt} Einstellungsdateien kamen an"
+        fi
+    else
+        echo "[svc-branding] Lawnchair liess sich nicht installieren, Pixel Launcher bleibt"
+    fi
+fi
+
 # The framework reads all of this at startup, so it gets one. This costs about
 # forty seconds and happens exactly once in the life of an AVD.
 adb shell stop
 sleep 3
 adb shell start
 if warte_auf_start; then
+    # THE DEFAULT LAUNCHER IS SET LAST, and that is the whole reason this sits
+    # down here rather than beside the install. Set before the framework
+    # restart it does not survive it: the command reports Success, and after
+    # the restart the stock launcher is back. Two full runs were spent before
+    # the order became the suspect.
+    #
+    # The FULL class name as well: dumpsys prints the component as
+    # app.lawnchair/.LawnchairLauncher, and that leading dot is not expanded
+    # everywhere it is accepted.
+    # The package manager is asked in the loop rather than as a gate. Straight
+    # after a framework restart it answers nothing at all, and a `grep -q` on
+    # nothing is a silent false: the whole block was skipped and not one line
+    # went into the log to say so.
+    if true; then
+        # SET, THEN CHECKED, THEN SET AGAIN. boot_completed is not the same as
+        # a settled package manager: right after it, set-home-activity answers
+        # Success and the preference is gone moments later, while the same
+        # command by hand a minute afterwards sticks. So this asks until the
+        # answer holds rather than trusting the first Success.
+        heim=""
+        for _ in $(seq 1 12); do
+            adb shell cmd package set-home-activity \
+                app.lawnchair/app.lawnchair.LawnchairLauncher >/dev/null 2>&1
+            sleep 5
+            heim="$(adb shell cmd package resolve-activity -c android.intent.category.HOME \
+                        -a android.intent.action.MAIN 2>/dev/null | grep -m1 packageName | tr -d ' \r')"
+            [[ "${heim}" == *"app.lawnchair"* ]] && break
+        done
+
+        if [[ "${heim}" == *"app.lawnchair"* ]]; then
+            echo "[svc-branding] Lawnchair mit Arcticons ist der Startbildschirm"
+        else
+            echo "[svc-branding] Startbildschirm blieb ${heim:-unbekannt}, Lawnchair griff nicht"
+        fi
+        adb shell input keyevent KEYCODE_HOME >/dev/null 2>&1
+    fi
+
     echo "[svc-branding] gesetzt"
     touch "${MARKE}"
 else
