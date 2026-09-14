@@ -73,6 +73,33 @@ jobs:
           username: ${{ vars.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      # Is the tag being built the newest release in this repo?
+      #
+      # `latest` moves only on a tag build, and only for the highest version.
+      # The two halves guard different accidents: the tag half stops an
+      # unreleased merge to main from reaching everyone who pulls `latest`, and
+      # the newest half stops a re-cut of an older version from dragging
+      # `latest` backwards onto it.
+      #
+      # checkout brings no tags along, so they are fetched here rather than
+      # assumed. `sort -V` compares versions, not strings, so v1.10.0 beats
+      # v1.9.0 instead of losing to it.
+      - name: Is this the newest release tag?
+        id: newest
+        if: github.ref_type == 'tag'
+        run: |
+          git fetch --tags --force --quiet
+          newest=$(git tag -l 'v[0-9]*.[0-9]*.[0-9]*' | sort -V | tail -1)
+          echo "this tag: ${GITHUB_REF_NAME}"
+          echo "newest:   ${newest}"
+          if [ "$newest" = "${GITHUB_REF_NAME}" ]; then
+            echo "is_newest=true" >> "$GITHUB_OUTPUT"
+            echo "-> this build moves :latest"
+          else
+            echo "is_newest=false" >> "$GITHUB_OUTPUT"
+            echo "-> this build leaves :latest where it is"
+          fi
+
       - name: Docker metadata (tags + labels)
         id: meta
         uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6
@@ -80,16 +107,25 @@ jobs:
           images: |
             ${{ env.IMAGE }}
             name=docker.io/${{ vars.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }},enable=${{ vars.DOCKERHUB_USERNAME != '' }}
-          # `latest` comes from a BRANCH build only, never from a tag build.
-          # `{{is_default_branch}}` reads like it means that and does not:
-          # metadata-action counts a tag on the default branch as the default
-          # branch, so every tag build would push `latest` too. Harmless while
-          # tags only move forward, and wrong the day an older version is
-          # re-cut. main is at or ahead of the newest tag when a release is
-          # made, so `latest` still tracks the newest code.
+          # `latest` means "the newest released version", and nothing else.
+          #
+          # It used to mean "the tip of main", on the argument that main is at
+          # or ahead of the newest tag whenever a release is cut. That argument
+          # is true and it is the problem: a merge to main hands an unreleased
+          # build to everybody pulling `latest` before any release exists, and
+          # the bug reports then arrive before the release notes do. So a tag
+          # build sets `latest`, and only when that tag is the newest release
+          # (see the step above). Gating on the tag alone would open the
+          # opposite accident, where re-cutting an old version tag pulls
+          # `latest` back onto an older build, which is why both halves are
+          # there.
+          #
+          # The tip of the default branch gets `edge` instead: still built,
+          # still pushed, still pullable, just nobody receives it by default.
           tags: |
             type=sha,format=short
-            type=raw,value=latest,enable=${{ github.ref_type == 'branch' && github.ref_name == github.event.repository.default_branch }}
+            type=raw,value=edge,enable=${{ github.ref_type == 'branch' && github.ref_name == github.event.repository.default_branch }}
+            type=raw,value=latest,enable=${{ github.ref_type == 'tag' && steps.newest.outputs.is_newest == 'true' }}
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=semver,pattern={{major}}
