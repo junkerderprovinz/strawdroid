@@ -39,11 +39,13 @@ what it hands over is an archive, not a visit to GitHub. The mark named the
 host; the glyph names the file.
 
 Run from anywhere:  python scripts/gen_download_buttons.py
-Writes .github/assets/download-buttons/*.svg, which are committed.
+Writes .github/assets/download-buttons/*.svg, which are committed, and the
+button row in README.md between its two markers.
 """
 
+import math
 import os
-import re
+from html import escape
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(HERE, "..", ".github", "assets", "download-buttons")
@@ -73,12 +75,23 @@ TEMPLATE = """<?xml version="1.0" encoding="UTF-8"?>
   <style>
     @keyframes pass {{
       0%       {{ transform: translateX({band_start}px); }}
-      13.57%   {{ transform: translateX({band_end}px); }}
+      {pass_pct}%   {{ transform: translateX({band_end}px); }}
       100%     {{ transform: translateX({band_end}px); }}
     }}
     /* linear, not eased: an eased pass hands off at the wrong moment and the
-       row stops reading as one band crossing both buttons. */
-    .band {{ animation: pass 7s linear {delay}s infinite; }}
+       row stops reading as one band crossing both buttons.
+
+       `backwards` is not decoration, it is the second half of the delay. An
+       animation that has not started yet leaves its element wherever the
+       document put it, which for this band is x=0 - INSIDE the button, against
+       its left edge. So the stagger that makes the row read as one band was
+       also parking a motionless band on every button but the first, for as long
+       as that button's delay, every single time the page loaded. It came right
+       on its own from the second cycle onwards, which is why it survived: it is
+       only ever wrong while somebody is looking at the row for the first time.
+       `backwards` holds the 0% state during the delay instead, and 0% is off
+       the left edge. */
+    .band {{ animation: pass {cycle}s linear {delay}s infinite backwards; }}
     @media (prefers-reduced-motion: reduce) {{
       .band {{ animation: none; opacity: 0; }}
     }}
@@ -94,27 +107,62 @@ TEMPLATE = """<?xml version="1.0" encoding="UTF-8"?>
       <!-- Taller than the canvas and started off its left edge, so the tilt
            never exposes a corner. skewX rather than rotate: the band stays
            axis-aligned for the translate, so the motion is one transform. -->
-      <rect x="0" y="-60" width="{band_w}" height="365.3"
+      <rect x="0" y="-60" width="{band_w}" height="{band_h}"
             fill="url(#sheen)" transform="skewX(-16)"/>
     </g>
   </g>
 </svg>
 """
 
-# THE SHEEN is the donation buttons' own: a tilted white band, clipped to the
-# button, crossing once every seven seconds. The second button starts 0.800s
-# later so one band appears to travel the whole row rather than two bands
-# blinking independently. That step is the donation row's 0.658s scaled by the
-# width these render at, 195 against their 160.
+# THE SHEEN IS DEFINED ON SCREEN, NOT ON THIS CANVAS, and that sentence is the
+# whole of this block.
 #
-# The geometry is scaled from the 841.9-wide coffee button: a 165-wide band on
-# 841.9 is 141 on 720, and the travel ends a band's width past the right edge
-# so nothing is left hanging in frame.
-SHEEN_W = 141.0
-SHEEN_FROM = -244.0
-SHEEN_TO = 822.0
+# A tilted white band, clipped to the button, crossing once every seven seconds:
+# the donation row's own, and the point is that it is the SAME band there and
+# here. It was not. Both rows described their band in their own canvas units,
+# and the two canvases differ (720 here, 841.9 there) as do the widths the
+# READMEs render them at (195 here, 160 there), so what reached the page was a
+# 38px band at 304px per second above a 31px band at 249. Two effects on one
+# page, which is what got reported.
+#
+# So the three numbers below are in SCREEN pixels and are the same for every row
+# in the house (see the GitHub style guide, "Der Schein"). Everything else is
+# derived from the width this row is rendered at.
+#
+# THE GAP IS MEASURED, not assumed. The row is `<img width="195">` with a
+# newline, two spaces and a `&nbsp;` between the images, which HTML collapses to
+# space-nbsp-space: 13.16px at GitHub's 16px body text, measured in a browser.
+# It used to be taken as 4px, which left the band hanging in the gap 17% too
+# long here - the visible half of the defect.
+#
+# The separator matters and is part of the rule: `&nbsp;` glued to the closing
+# `</a>` instead of standing on its own line measures 8.77px, and a row written
+# that way needs its own number.
+BAND_PX = 33.0     # the band's width on screen
+SPEED = 250.0      # screen pixels per second
+GAP_PX = 13.16     # measured, see above
+RENDER_PX = 195.0  # the width the README asks for
+CYCLE = 7.0        # seconds, one full loop including the rest
 
-# slug, brand file, background, ink, heading, second line, accessible name, delay
+# Canvas units per screen pixel, for this row's own rendered width.
+SCALE = W / RENDER_PX
+SHEEN_W = BAND_PX * SCALE
+# The band is skewed, so its horizontal extent is wider than the rect: skewX
+# shifts every point by tan(16 degrees) times its own y, and the rect is taller
+# than the canvas on both sides. Clearing the edge by the rect's width alone
+# would leave the tilted corner showing.
+SHEEN_H = H + 120.0
+CLEAR = SHEEN_W + math.tan(math.radians(16)) * SHEEN_H
+SHEEN_FROM = -CLEAR
+SHEEN_TO = W + CLEAR
+# How long the band needs to cross one button, and how long to travel from one
+# button's left edge to the next one's. Both come from one speed, so the band
+# leaves button n at the moment it enters button n+1.
+PASS = (SHEEN_TO - SHEEN_FROM) / SCALE / SPEED
+STEP = (RENDER_PX + GAP_PX) / SPEED
+PASS_PCT = PASS / CYCLE * 100.0
+
+# slug, brand file, background, ink, heading, second line, accessible name
 #
 # GitHub's own colour is black, and a black button without an outline vanishes
 # into GitHub's dark theme, exactly as a black macOS button did in ArrowLoop's
@@ -130,19 +178,56 @@ SHEEN_TO = 822.0
 # its ink is dark rather than white. White on that yellow fails every contrast
 # check and looks washed out next to the other three.
 #
-# The delays are spaced so one sheen appears to travel the whole row rather
-# than four appearing at once: 0.800s apart, the donation row's step scaled to
-# the width these render at.
+#
+# The delay is the button's POSITION times STEP, computed below rather than
+# written out here: a hand-kept column of seconds is a column somebody edits the
+# row without touching, and then the band hands off into nothing.
+#
+# THIS ROW STARTS AT ZERO because it is the FIRST row on the page. One band
+# works its way down the README rather than one band per row running beside the
+# others: the whole first row, then the whole second. The give row below carries
+# the other half of that schedule - a fixed 3.8s offset, which is when the
+# longest download row in the house (ArrowLoop's four buttons) has finished. It
+# has to be a fixed number rather than a derived one, because those three
+# buttons are one shared asset referenced by twenty-six repositories and cannot
+# know what a given README puts above them.
+#
+# The last column is where the button leads. It lives here with the rest of the
+# button because this file writes the README row too, see write_readme().
 BUTTONS = [
     ("docker-image", "docker", "#1d63ed", "#ffffff",
-     "Docker", "compose file", "Download the docker-compose file", "0.000"),
+     "Docker", "compose file", "Download the docker-compose file",
+     "https://github.com/junkerderprovinz/strawknight/releases/latest/download/docker-compose.yml"),
     ("windows", "windows", "#0078d4", "#ffffff",
-     "Windows", "start script", "Download the Windows start script", "0.800"),
+     "Windows", "start script", "Download the Windows start script",
+     "https://github.com/junkerderprovinz/strawknight/releases/latest/download/start-windows.ps1"),
     ("linux", "linux", "#fcc624", "#1b1b1b",
-     "Linux", "start script", "Download the Linux start script", "1.600"),
+     "Linux", "start script", "Download the Linux start script",
+     "https://github.com/junkerderprovinz/strawknight/releases/latest/download/start-linux.sh"),
     ("source-zip", "zip", "#4d5562", "#ffffff",
-     "Source", "zip archive", "Download the source archive for this release", "2.400"),
+     "Source", "zip archive", "Download the source archive",
+     "https://github.com/junkerderprovinz/strawknight/archive/refs/heads/main.zip"),
 ]
+
+# THE README ROW is written here as well, between two markers, so a button added
+# to BUTTONS reaches the page by running this file and nothing else, once it is
+# on main: the Worker below always reads main, so a branch's README preview
+# shows a button that exists only on that branch as a broken image.
+#
+# Its images come from buttons.halleluja.design, not straight from this
+# repository. Every <img> runs its animation on its own clock, started when that
+# one image arrived, and on a first visit the images of one row arrived up to
+# 1.2 s apart, so the band jumped between buttons instead of travelling. That
+# Worker serves these same files with the delay rewritten against the wall clock
+# at the moment it answers, which puts every image on one schedule however late
+# it loads. It serves any file in .github/assets/download-buttons/ of any
+# junkerderprovinz repository, so a new button needs no change there. Source and
+# measurements: junkerderprovinz/junkerderprovinz, donate/worker/.
+REPO = "strawknight"
+BUTTON_HOST = "https://buttons.halleluja.design"
+README = os.path.join(HERE, "..", "README.md")
+ROW_OPEN = "<!-- download-buttons: written by scripts/gen_download_buttons.py -->"
+ROW_CLOSE = "<!-- /download-buttons -->"
 
 
 def brand(name):
@@ -154,9 +239,51 @@ def brand(name):
     return path, box[2], box[3]
 
 
+def read_readme():
+    """README.md and where its row sits, checked before anything is written.
+
+    Checked first, so a README without its markers stops the run while the
+    buttons are still untouched, instead of leaving them and the row out of
+    step. REPO is checked against the links for the same reason: copied into
+    another repository and left unchanged, it would quietly show this
+    repository's buttons there.
+    """
+    with open(README, "rb") as fh:
+        text = fh.read().decode("utf-8")
+    start = text.find(ROW_OPEN)
+    end = text.find(ROW_CLOSE, start) if start >= 0 else -1
+    if end < 0:
+        raise SystemExit(f"README.md has no {ROW_OPEN} ... {ROW_CLOSE} around the button row")
+    for slug, *_, href in BUTTONS:
+        if f"/{REPO}/" not in href:
+            raise SystemExit(f"REPO is {REPO!r}, but {slug} leads to {href}")
+    return text, start, end
+
+
+def write_readme(text, start, end):
+    """Replace the row between the markers.
+
+    The separator stands on its own line, two spaces in, because that is the
+    gap GAP_PX was measured on. The width is RENDER_PX for the same reason. The
+    row takes the line ending of its own marker line.
+    """
+    nl = "\r\n" if text[start:].split("\n", 1)[0].endswith("\r") else "\n"
+    row = [ROW_OPEN, '<p align="center">']
+    for index, (slug, *_, alt, href) in enumerate(BUTTONS):
+        if index:
+            row.append("  &nbsp;")
+        row.append(f'  <a href="{escape(href)}"><img src="{BUTTON_HOST}/{REPO}/{slug}.svg" '
+                   f'alt="{escape(alt)}" width="{RENDER_PX:g}"></a>')
+    row.append("</p>")
+    with open(README, "wb") as fh:
+        fh.write((text[:start] + nl.join(row) + nl + text[end:]).encode("utf-8"))
+    print(f"README.md  row of {len(BUTTONS)}")
+
+
 def main():
+    readme = read_readme()
     os.makedirs(OUT, exist_ok=True)
-    for slug, mark, bg, ink, head, sub, alt, delay in BUTTONS:
+    for index, (slug, mark, bg, ink, head, sub, alt, _href) in enumerate(BUTTONS):
         path, bw, bh = brand(mark)
         # Scale on the LONGER axis so glyphs of different proportions end up
         # the same optical size. Docker's box is 640 by 512, the ZIP glyph's is
@@ -168,13 +295,19 @@ def main():
         gy = GY + (GLYPH - bh * scale) / 2
         svg = TEMPLATE.format(w=W, h=H, r=R, bg=bg, ink=ink, gx=gx, gy=gy,
                               scale=scale, path=path, font=FONT, head=head,
-                              sub_text=sub, alt=alt, delay=delay,
-                              band_w=SHEEN_W, band_start=SHEEN_FROM,
-                              band_end=SHEEN_TO)
+                              sub_text=sub, alt=escape(alt),
+                              delay="%.3f" % (STEP * index),
+                              cycle="%g" % CYCLE,
+                              pass_pct="%.2f" % PASS_PCT,
+                              band_w="%.1f" % SHEEN_W,
+                              band_h="%g" % SHEEN_H,
+                              band_start="%.1f" % SHEEN_FROM,
+                              band_end="%.1f" % SHEEN_TO)
         ziel = os.path.join(OUT, slug + ".svg")
         with open(ziel, "wb") as fh:
             fh.write(svg.encode("utf-8"))
         print(f"{slug}.svg  {os.path.getsize(ziel)} B")
+    write_readme(*readme)
 
 
 if __name__ == "__main__":

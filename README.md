@@ -22,15 +22,17 @@
 
 <br>
 
+<!-- download-buttons: written by scripts/gen_download_buttons.py -->
 <p align="center">
-  <a href="https://github.com/junkerderprovinz/strawknight/releases/latest/download/docker-compose.yml"><img src="https://raw.githubusercontent.com/junkerderprovinz/strawknight/main/.github/assets/download-buttons/docker-image.svg" alt="Download the docker-compose file" width="195"></a>
+  <a href="https://github.com/junkerderprovinz/strawknight/releases/latest/download/docker-compose.yml"><img src="https://buttons.halleluja.design/strawknight/docker-image.svg" alt="Download the docker-compose file" width="195"></a>
   &nbsp;
-  <a href="https://github.com/junkerderprovinz/strawknight/releases/latest/download/start-windows.ps1"><img src="https://raw.githubusercontent.com/junkerderprovinz/strawknight/main/.github/assets/download-buttons/windows.svg" alt="Download the Windows start script" width="195"></a>
+  <a href="https://github.com/junkerderprovinz/strawknight/releases/latest/download/start-windows.ps1"><img src="https://buttons.halleluja.design/strawknight/windows.svg" alt="Download the Windows start script" width="195"></a>
   &nbsp;
-  <a href="https://github.com/junkerderprovinz/strawknight/releases/latest/download/start-linux.sh"><img src="https://raw.githubusercontent.com/junkerderprovinz/strawknight/main/.github/assets/download-buttons/linux.svg" alt="Download the Linux start script" width="195"></a>
+  <a href="https://github.com/junkerderprovinz/strawknight/releases/latest/download/start-linux.sh"><img src="https://buttons.halleluja.design/strawknight/linux.svg" alt="Download the Linux start script" width="195"></a>
   &nbsp;
-  <a href="https://github.com/junkerderprovinz/strawknight/archive/refs/heads/main.zip"><img src="https://raw.githubusercontent.com/junkerderprovinz/strawknight/main/.github/assets/download-buttons/source-zip.svg" alt="Download the source archive" width="195"></a>
+  <a href="https://github.com/junkerderprovinz/strawknight/archive/refs/heads/main.zip"><img src="https://buttons.halleluja.design/strawknight/source-zip.svg" alt="Download the source archive" width="195"></a>
 </p>
+<!-- /download-buttons -->
 
 <br>
 
@@ -45,11 +47,11 @@ If it has earned a place on your server or computer, toss a coin to your knight:
 <br>
 
 <p align="center">
-  <a href="https://buymeacoffee.com/junkerderprovinz"><img src="https://raw.githubusercontent.com/junkerderprovinz/junkerderprovinz/main/donate/buttons/button-buy-me-a-coffee-live.svg" alt="Buy me a coffee" width="160"></a>
+  <a href="https://buymeacoffee.com/junkerderprovinz"><img src="https://buttons.halleluja.design/give/buy-me-a-coffee.svg" alt="Buy me a coffee" width="160"></a>
   &nbsp;
-  <a href="https://www.paypal.com/donate/?hosted_button_id=76FVV52TKXTUS"><img src="https://raw.githubusercontent.com/junkerderprovinz/junkerderprovinz/main/donate/buttons/button-paypal-live.svg" alt="PayPal" width="160"></a>
+  <a href="https://www.paypal.com/donate/?hosted_button_id=76FVV52TKXTUS"><img src="https://buttons.halleluja.design/give/paypal.svg" alt="PayPal" width="160"></a>
   &nbsp;
-  <a href="https://junkerderprovinz.github.io/junkerderprovinz/"><img src="https://raw.githubusercontent.com/junkerderprovinz/junkerderprovinz/main/donate/buttons/button-crypto-live.svg" alt="Donate with crypto" width="160"></a>
+  <a href="https://junkerderprovinz.github.io/junkerderprovinz/"><img src="https://buttons.halleluja.design/give/crypto.svg" alt="Donate with crypto" width="160"></a>
 </p>
 
 <br>
@@ -250,9 +252,9 @@ A one-knight job: I build it, keep it running, work through the issues and add w
 If it has earned a place on your server or computer, toss a coin to your knight: it helps cover the costs and keeps the project alive. It also makes this knight's heart beat a little faster. Three ways below, whichever suits you.
 
 <p align="center">
-  <a href="https://buymeacoffee.com/junkerderprovinz"><img src="https://raw.githubusercontent.com/junkerderprovinz/junkerderprovinz/main/donate/buttons/button-buy-me-a-coffee-live.svg" alt="Buy me a coffee" width="160"></a>
+  <a href="https://buymeacoffee.com/junkerderprovinz"><img src="https://buttons.halleluja.design/give/buy-me-a-coffee.svg" alt="Buy me a coffee" width="160"></a>
   &nbsp;
-  <a href="https://www.paypal.com/donate/?hosted_button_id=76FVV52TKXTUS"><img src="https://raw.githubusercontent.com/junkerderprovinz/junkerderprovinz/main/donate/buttons/button-paypal-live.svg" alt="PayPal" width="160"></a>
+  <a href="https://www.paypal.com/donate/?hosted_button_id=76FVV52TKXTUS"><img src="https://buttons.halleluja.design/give/paypal.svg" alt="PayPal" width="160"></a>
   &nbsp;
-  <a href="https://junkerderprovinz.github.io/junkerderprovinz/"><img src="https://raw.githubusercontent.com/junkerderprovinz/junkerderprovinz/main/donate/buttons/button-crypto-live.svg" alt="Donate with crypto" width="160"></a>
+  <a href="https://junkerderprovinz.github.io/junkerderprovinz/"><img src="https://buttons.halleluja.design/give/crypto.svg" alt="Donate with crypto" width="160"></a>
 </p>
