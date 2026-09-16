@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Icons fuer StrawKnight und TrialYard, transparent, auf jdps Wunsch.
+"""Icons fuer StrawDroid und TrialYard, transparent, auf jdps Wunsch.
 
 Beide Marken werden in ein QUADRAT von 512 Kanten gesetzt und darin nach ihrer
 laengeren Achse skaliert, nicht nach der Breite. Der Android-Roboter ist hoch,
@@ -42,9 +42,9 @@ def beschnitten(pfad):
     return im.crop(kasten) if kasten else im
 
 
-# --- StrawKnight: der ganze Roboter -----------------------------------------
+# --- StrawDroid: der ganze Roboter -----------------------------------------
 sk = quadrat(beschnitten(os.path.join(HIER, "android-robot.png")))
-sk.save(os.path.join(HIER, "strawknight-icon.png"))
+sk.save(os.path.join(HIER, "strawdroid-icon.png"))
 
 # --- TrialYard: der Muelleimer vom Desktop ----------------------------------
 # Die SVG traegt keine Farbe, also ist ihr fill schwarz. Auf Unraids dunkler

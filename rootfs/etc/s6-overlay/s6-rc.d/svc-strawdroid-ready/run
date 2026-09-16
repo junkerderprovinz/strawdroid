@@ -1,7 +1,7 @@
 #!/usr/bin/with-contenv bash
 # shellcheck shell=bash
 # -----------------------------------------------------------------------------
-# svc-strawknight-ready - say when the phone is actually usable
+# svc-strawdroid-ready - say when the phone is actually usable
 # -----------------------------------------------------------------------------
 # House standard: every own-image container prints an "<APP> IS READY" line as
 # the last block of its log.
@@ -12,7 +12,7 @@
 # this waits for the WebUI AND for Android to report a completed boot, and says
 # which of the two it is still waiting on.
 # -----------------------------------------------------------------------------
-FLAG="/run/strawknight-ready.printed"
+FLAG="/run/strawdroid-ready.printed"
 
 # /run is tmpfs, wiped on every container start, so the banner prints once per
 # start rather than once per image.
@@ -51,7 +51,7 @@ done
 # still arrives, a little late, instead of never.
 if [[ "${booted}" -eq 1 ]]; then
     for _ in $(seq 1 90); do
-        [[ -f /run/strawknight-branding-done ]] && break
+        [[ -f /run/strawdroid-branding-done ]] && break
         sleep 2
     done
 fi
@@ -66,14 +66,14 @@ fi
 own_ip="$(ip -4 route get 1.1.1.1 2>/dev/null | awk '{for(i=1;i<NF;i++) if($i=="src") print $(i+1); exit}')"
 [[ -z "${own_ip}" ]] && own_ip="this container"
 
-/usr/local/bin/print-banner.sh "StrawKnight" "Android ${release} on Selkies" 2>/dev/null || true
+/usr/local/bin/print-banner.sh "StrawDroid" "Android ${release} on Selkies" 2>/dev/null || true
 
 GREEN='\033[0;32m'
 RED='\033[0;31m'
 NC='\033[0m'
 
 if [[ "${web}" -eq 1 && "${booted}" -eq 1 ]]; then
-    echo -e "  ${GREEN}✓ STRAWKNIGHT IS READY${NC} - Android ${release}"
+    echo -e "  ${GREEN}✓ STRAWDROID IS READY${NC} - Android ${release}"
     echo "    Screen:  https://${own_ip}:${CUSTOM_HTTPS_PORT:-3001}/"
     echo "    Deploy:  adb connect ${own_ip}:${ADB_DEVICE_PORT:-5555}"
     echo "    Doze:    adb -s ${own_ip}:${ADB_DEVICE_PORT:-5555} shell dumpsys deviceidle force-idle"
@@ -81,10 +81,10 @@ elif [[ "${web}" -eq 1 ]]; then
     # Named separately because the two failures have nothing to do with each
     # other: a desktop that never served is a Selkies problem, and a phone that
     # never booted is almost always a missing /dev/kvm.
-    echo -e "  ${RED}✗ STRAWKNIGHT IS NOT READY${NC} - the desktop serves but Android never finished booting"
+    echo -e "  ${RED}✗ STRAWDROID IS NOT READY${NC} - the desktop serves but Android never finished booting"
     echo "    The usual cause is a missing --device=/dev/kvm on this container; check the log above."
 else
-    echo -e "  ${RED}✗ STRAWKNIGHT IS NOT READY${NC} - the WebUI never answered, check the log above"
+    echo -e "  ${RED}✗ STRAWDROID IS NOT READY${NC} - the WebUI never answered, check the log above"
 fi
 echo ""
 

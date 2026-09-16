@@ -1,17 +1,17 @@
 <!DOCTYPE html>
 <!--
-  Unraid Community Applications support thread for StrawKnight.
+  Unraid Community Applications support thread for StrawDroid.
   Structure mirrors the sister-app threads (e.g. featherdrop, Krusader):
   title -> subtitle -> banner -> buttons -> What is this? -> Highlights ->
   Requirements -> Posting a bug report -> Credits -> disclaimer.
   Open standalone in a browser, or paste into the Unraid forum editor's source.
-  Title: [Support] junkerderprovinz - strawknight
+  Title: [Support] junkerderprovinz - strawdroid
 -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>[Support] junkerderprovinz - strawknight</title>
+<title>[Support] junkerderprovinz - strawdroid</title>
 <style>
   body { max-width: 900px; margin: 1.5rem auto; padding: 0 1rem;
          font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -30,26 +30,26 @@
 </head>
 <body>
 
-<h1>StrawKnight: a real Android emulator for Unraid</h1>
+<h1>StrawDroid: a real Android emulator for Unraid</h1>
 <p class="subtitle">A phone you can break.</p>
 
 <p align="center">
-  <a href="https://github.com/junkerderprovinz/strawknight">
-    <img src="https://raw.githubusercontent.com/junkerderprovinz/strawknight/main/.github/assets/strawknight-banner-logo.png" alt="StrawKnight" width="100%">
+  <a href="https://github.com/junkerderprovinz/strawdroid">
+    <img src="https://raw.githubusercontent.com/junkerderprovinz/strawdroid/main/.github/assets/strawdroid-banner-logo.png" alt="StrawDroid" width="100%">
   </a>
 </p>
 
 <p align="center">
-  <a href="https://unraid.net/community/apps?q=strawknight"><img src="https://raw.githubusercontent.com/junkerderprovinz/strawknight/main/.github/assets/support-buttons/install-on-unraid.svg" alt="Install on Unraid" width="240"></a>
+  <a href="https://unraid.net/community/apps?q=strawdroid"><img src="https://raw.githubusercontent.com/junkerderprovinz/strawdroid/main/.github/assets/support-buttons/install-on-unraid.svg" alt="Install on Unraid" width="240"></a>
   &nbsp;
-  <a href="https://github.com/junkerderprovinz/strawknight"><img src="https://raw.githubusercontent.com/junkerderprovinz/strawknight/main/.github/assets/support-buttons/view-on-github.svg" alt="View on GitHub" width="240"></a>
+  <a href="https://github.com/junkerderprovinz/strawdroid"><img src="https://raw.githubusercontent.com/junkerderprovinz/strawdroid/main/.github/assets/support-buttons/view-on-github.svg" alt="View on GitHub" width="240"></a>
   &nbsp;
-  <a href="https://buymeacoffee.com/junkerderprovinz"><img src="https://raw.githubusercontent.com/junkerderprovinz/strawknight/main/.github/assets/support-buttons/buy-me-a-coffee.svg" alt="Buy me a coffee" width="240"></a>
+  <a href="https://buymeacoffee.com/junkerderprovinz"><img src="https://raw.githubusercontent.com/junkerderprovinz/strawdroid/main/.github/assets/support-buttons/buy-me-a-coffee.svg" alt="Buy me a coffee" width="240"></a>
 </p>
 
 <h2>What is this?</h2>
-<p>A straw knight is the practice dummy: built in the shape of the real thing so somebody
-can strike at it without anybody getting hurt. This container runs the
+<p>A straw droid is a practice dummy shaped like an Android phone: built like the real
+thing so somebody can strike at it without anybody getting hurt. This container runs the
 <strong>real Android emulator</strong>, the same AVD Android Studio starts, headless on a
 <a href="https://github.com/selkies-project/selkies">Selkies</a> desktop. The screen
 arrives in your browser over WebRTC and is encoded on the box's own GPU, and
@@ -70,7 +70,7 @@ demand.</p>
   <li><strong>WebRTC, not VNC</strong>: judging how an app feels is judging its scrolling and its transitions, which is exactly the part a framebuffer diff smears</li>
   <li><strong>The device arrives set up</strong>: wallpaper, dark mode, an empty home screen and monochrome icons everywhere, done once on the first boot and never written again, so anything you change afterwards is yours</li>
   <li><strong>Persistent by design</strong>: <code>/config</code> holds the device itself, including installed apps and granted permissions, so a restart is not a factory reset</li>
-  <li>Image: <code>ghcr.io/junkerderprovinz/strawknight:latest</code></li>
+  <li>Image: <code>ghcr.io/junkerderprovinz/strawdroid:latest</code></li>
 </ul>
 
 <h2>Requirements</h2>
@@ -87,12 +87,12 @@ demand.</p>
 <ul>
   <li>Unraid version (Settings &gt; System Information)</li>
   <li>Image tag (<code>latest</code> or a pinned <code>vX.Y.Z</code>)</li>
-  <li>Output of <code>docker logs --tail 200 StrawKnight</code></li>
+  <li>Output of <code>docker logs --tail 200 StrawDroid</code></li>
   <li>Whether <code>/dev/kvm</code> is present on the host: <code>ls -l /dev/kvm</code></li>
   <li>Whether you changed <code>EMULATOR_GPU</code>, <code>EMULATOR_DEVICE</code>, <code>EMULATOR_RAM</code> or the <code>/config</code> mount</li>
 </ul>
 <p>GitHub issues with the same information are just as welcome:
-<a href="https://github.com/junkerderprovinz/strawknight/issues">github.com/junkerderprovinz/strawknight/issues</a></p>
+<a href="https://github.com/junkerderprovinz/strawdroid/issues">github.com/junkerderprovinz/strawdroid/issues</a></p>
 
 <h2>Credits</h2>
 <p>Built on the <a href="https://developer.android.com/studio/run/emulator">Android emulator</a>
@@ -102,7 +102,7 @@ The device ships with <a href="https://github.com/LawnchairLauncher/lawnchair">L
 (Apache-2.0) and the <a href="https://github.com/Donnnno/Arcticons">Arcticons</a> icon pack
 (GPL-3.0) by Donnnno, both unmodified. <a href="https://github.com/budtmo/docker-android">budtmo/docker-android</a>
 did this first and is well kept; this one differs in putting the emulator on a
-hardware-encoded desktop rather than behind noVNC. If StrawKnight saves you a spare phone,
+hardware-encoded desktop rather than behind noVNC. If StrawDroid saves you a spare phone,
 you can <a href="https://buymeacoffee.com/junkerderprovinz">buy me a coffee</a>.</p>
 
 <hr>

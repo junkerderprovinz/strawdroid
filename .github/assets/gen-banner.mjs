@@ -1,5 +1,5 @@
 /**
- * Banner fuer StrawKnight, hell und dunkel.
+ * Banner fuer StrawDroid, hell und dunkel.
  *
  * Nach demselben Muster wie glimstones gen-banner.mjs: 1600 auf 500, Marke
  * links, Name in Bree Serif, Claim in Lato. Der Text wird ueber opentype.js in
@@ -26,10 +26,10 @@ const { Resvg } = require(`${groot}/@resvg/resvg-js`);
 
 const __dir = dirname(fileURLToPath(import.meta.url));
 
-const SLUG = "strawknight";
-const NAME = "StrawKnight";
+const SLUG = "strawdroid";
+const NAME = "StrawDroid";
 const CLAIM = "A phone you can break.";
-const MARK = join(__dir, "..", "..", "assets", "strawknight.svg");
+const MARK = join(__dir, "..", "..", "assets", "strawdroid.svg");
 
 const W = 1600, H = 500;
 const LH = 420, LW = 420;

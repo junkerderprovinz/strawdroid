@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Overrides the Selkies base image's /defaults/startwm.sh.
 #
-# HOUSE RULE - the "<APP> IS READY" banner, printed by svc-strawknight-ready
+# HOUSE RULE - the "<APP> IS READY" banner, printed by svc-strawdroid-ready
 # once the desktop serves and Android has booted, MUST be the LAST block in
 # `docker logs`. The desktop session prints continuously; if its stdout stays on
 # the service's stdio, its output trails past the READY banner and the log no

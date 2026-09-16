@@ -1,7 +1,7 @@
 #!/usr/bin/with-contenv bash
 # shellcheck shell=bash
 # -----------------------------------------------------------------------------
-# init-strawknight - make the phone, once, and keep it
+# init-strawdroid - make the phone, once, and keep it
 # -----------------------------------------------------------------------------
 # Runs as an s6-rc oneshot AFTER init-selkies-config, because that base oneshot
 # seeds /config/.config/openbox/{autostart,menu.xml} from /defaults on first
@@ -17,7 +17,7 @@
 # -----------------------------------------------------------------------------
 set -e
 
-log() { echo "[init-strawknight] $*"; }
+log() { echo "[init-strawdroid] $*"; }
 
 CONFIG_HOME="/config/.config"
 mkdir -p "${CONFIG_HOME}/openbox" \
@@ -40,7 +40,7 @@ else
     log "WARNING: without it the emulator will not start."
 fi
 
-AVD_NAME="${AVD_NAME:-strawknight}"
+AVD_NAME="${AVD_NAME:-strawdroid}"
 AVD_DIR="/config/.android/avd/${AVD_NAME}.avd"
 
 # An AVD names its system image by PATH, and the image ships only one Android
@@ -58,7 +58,7 @@ if [ -d "${AVD_DIR}" ]; then
     if [ -n "${sysdir}" ] && [ ! -d "${ANDROID_SDK_ROOT}/${sysdir}" ]; then
         stamp="$(date +%Y%m%d-%H%M%S)"
         log "WARNING: AVD ${AVD_NAME} was built on ${sysdir}, which this image no longer carries."
-        log "WARNING: moving it to ${AVD_NAME}.avd.old-${stamp} and building a fresh one on ${STRAWKNIGHT_PACKAGE}."
+        log "WARNING: moving it to ${AVD_NAME}.avd.old-${stamp} and building a fresh one on ${STRAWDROID_PACKAGE}."
         log "WARNING: anything installed on the old device, and any permission it was granted, is gone with it."
         mv "${AVD_DIR}" "${AVD_DIR}.old-${stamp}"
         mv "/config/.android/avd/${AVD_NAME}.ini" "/config/.android/avd/${AVD_NAME}.ini.old-${stamp}" 2>/dev/null || true
@@ -68,13 +68,13 @@ fi
 if [ -d "${AVD_DIR}" ]; then
     log "AVD ${AVD_NAME} already exists, keeping it and everything installed on it"
 else
-    log "creating AVD ${AVD_NAME} from ${STRAWKNIGHT_PACKAGE} (device ${EMULATOR_DEVICE})"
+    log "creating AVD ${AVD_NAME} from ${STRAWDROID_PACKAGE} (device ${EMULATOR_DEVICE})"
     # --device names a hardware profile: screen size and density, which is what
     # a layout is actually judged against. An AVD with no profile gets a generic
     # square that resembles no phone anybody owns.
     echo "no" | avdmanager create avd \
         --name "${AVD_NAME}" \
-        --package "${STRAWKNIGHT_PACKAGE}" \
+        --package "${STRAWDROID_PACKAGE}" \
         --device "${EMULATOR_DEVICE}" \
         --force >/dev/null
 
@@ -101,7 +101,7 @@ fi
 # emulator then could not write qemu-version.txt, its first start died, and
 # every restart after that hit the leftover lock:
 #
-#   FATAL | A snapshot operation for 'strawknight' is pending and timeout has
+#   FATAL | A snapshot operation for 'strawdroid' is pending and timeout has
 #           expired. Exiting...
 #
 # which reads like a corrupt AVD and is a permission bit. Measured on
@@ -109,5 +109,5 @@ fi
 chown -R abc:abc \
     "${CONFIG_HOME}" "/config/.local" "/config/.cache" "/config/.android" 2>/dev/null || true
 
-log "init-strawknight done"
+log "init-strawdroid done"
 exit 0

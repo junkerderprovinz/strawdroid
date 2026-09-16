@@ -1,4 +1,4 @@
-# StrawKnight on Windows.
+# StrawDroid on Windows.
 #
 #   Right-click this file and choose "Run with PowerShell", or:
 #   powershell -ExecutionPolicy Bypass -File start-windows.ps1
@@ -16,8 +16,8 @@
 
 $ErrorActionPreference = "Stop"
 
-$Image     = "ghcr.io/junkerderprovinz/strawknight:latest"
-$Container = "StrawKnight"
+$Image     = "ghcr.io/junkerderprovinz/strawdroid:latest"
+$Container = "StrawDroid"
 $Port      = 3001
 $AdbPort   = 5555
 
@@ -111,7 +111,7 @@ docker rm -f $Container 2>$null | Out-Null
 docker run -d --name $Container `
     --device=/dev/kvm `
     -p "${Port}:3001" -p "${AdbPort}:5555" `
-    -v strawknight-config:/config `
+    -v strawdroid-config:/config `
     --shm-size=2gb --cpus="4" --memory="8g" `
     -e TZ=(Get-TimeZone).Id `
     -e EMULATOR_GPU=swiftshader_indirect `

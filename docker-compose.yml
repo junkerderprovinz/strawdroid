@@ -1,4 +1,4 @@
-# StrawKnight, ready to run.
+# StrawDroid, ready to run.
 #
 #   docker compose up -d
 #
@@ -6,9 +6,9 @@
 # once. From a development machine: adb connect <this-host>:5555
 
 services:
-  strawknight:
-    image: ghcr.io/junkerderprovinz/strawknight:latest
-    container_name: StrawKnight
+  strawdroid:
+    image: ghcr.io/junkerderprovinz/strawdroid:latest
+    container_name: StrawDroid
 
     # KVM is not optional. Without it the emulator does not start, and the
     # container log says so in as many words rather than leaving a black

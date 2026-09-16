@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Hintergrundbild fuer StrawKnights Selkies-Flaeche.
+"""Hintergrundbild fuer StrawDroids Selkies-Flaeche.
 
 Der Satz auf der Flaeche steht da, weil die halbe Minute vor dem ersten Bild
 sonst ein schwarzes Rechteck ist, und ein schwarzes Rechteck ist von einem
@@ -11,7 +11,7 @@ jedem Screenshot eines oeffentlichen Repos, dessen gesamte Doku englisch ist.
 Aufgefallen ist es erst, als der erste Screenshot fuer das README gemacht wurde.
 
 Das Icon erzeugt dieses Skript nicht mehr. Marke und Kachel kommen aus
-`strawknight.svg` ueber `.github/assets/gen-banner.mjs` beziehungsweise die
+`strawdroid.svg` ueber `.github/assets/gen-banner.mjs` beziehungsweise die
 Icon-Ableitung daraus, damit Banner, Kachel und Flaeche dieselbe Zeichnung
 zeigen. Die frueheren Fassungen lasen `android.png`, eine Datei, die nie im
 Repo lag: das Skript lief damit bei niemandem ausser seinem Autor.
@@ -57,7 +57,7 @@ def hintergrund(breite=BREITE, hoehe=HOEHE):
     # Geraet. Ein Hinweis, der nur eine halbe Minute lang wahr ist, ist danach
     # eine Fehlinformation an prominenter Stelle.
     for text, font, farbe, y in (
-        ("StrawKnight", titel, (200, 200, 200), hoehe // 2 + 40),
+        ("StrawDroid", titel, (200, 200, 200), hoehe // 2 + 40),
         ("The device window appears here once the emulator has booted.",
          zeile, (120, 120, 120), hoehe // 2 + 120),
         ("Right-click the desktop for a terminal.",

@@ -1,9 +1,10 @@
 # syntax=docker/dockerfile:1.26
 #
-# StrawKnight - an Android phone you can hit as hard as you like
+# StrawDroid - an Android phone you can hit as hard as you like
 # -----------------------------------------------------------------------------
-# A straw knight is the practice dummy: built in the shape of the real thing so
-# somebody can strike at it without anybody getting hurt. That is what this is.
+# A straw droid is a practice dummy shaped like an Android phone: built like the
+# real thing so somebody can strike at it without anybody getting hurt. That is
+# what this is.
 # It runs the REAL Android emulator - the same AVD Android Studio starts - with
 # its screen on a Selkies desktop, so an app under development can be installed,
 # driven and broken without an APK ever touching a phone.
@@ -34,10 +35,10 @@ ARG BASE_TAG=ubunturesolute
 FROM ghcr.io/linuxserver/baseimage-selkies:${BASE_TAG}
 
 LABEL maintainer="junkerderprovinz"
-LABEL org.opencontainers.image.title="strawknight"
-LABEL org.opencontainers.image.description="StrawKnight - a real Android emulator on a Selkies desktop, so an app can be installed and broken without touching a phone."
+LABEL org.opencontainers.image.title="strawdroid"
+LABEL org.opencontainers.image.description="StrawDroid - a real Android emulator on a Selkies desktop, so an app can be installed and broken without touching a phone."
 LABEL org.opencontainers.image.vendor="junkerderprovinz"
-LABEL org.opencontainers.image.source="https://github.com/junkerderprovinz/strawknight"
+LABEL org.opencontainers.image.source="https://github.com/junkerderprovinz/strawdroid"
 
 # TITLE feeds the PWA manifest; SELKIES_UI_TITLE is the visible tab and sidebar
 # title of the Selkies web client. Both must be set on this base.
@@ -47,8 +48,8 @@ LABEL org.opencontainers.image.source="https://github.com/junkerderprovinz/straw
 # krusader and Crucible - no login unless CUSTOM_USER and PASSWORD are actually
 # set, which init-nologin enforces by stripping the empty values Unraid passes
 # for blank template fields.
-ENV TITLE="StrawKnight" \
-    SELKIES_UI_TITLE="StrawKnight" \
+ENV TITLE="StrawDroid" \
+    SELKIES_UI_TITLE="StrawDroid" \
     SELKIES_ENABLE_BASIC_AUTH="false"
 
 # ---------------------------------------------------------------------------
@@ -104,7 +105,7 @@ RUN set -eux; \
 # Only ONE level is installed, and that has a consequence the boot script has to
 # handle: an AVD in the persistent volume points at a system image by path, so
 # raising this number leaves the existing device pointing at an image that is no
-# longer in the container. See init-strawknight, which notices and says so.
+# longer in the container. See init-strawdroid, which notices and says so.
 #
 # google_apis rather than the plain AOSP image, because it carries Play services
 # and a real DocumentsUI - the SAF file picker an app asks for a folder with. An
@@ -151,8 +152,8 @@ RUN set -eux; \
 
 # Which image the AVD is built from at first boot, recorded here so the boot
 # script does not have to repeat the build arguments and drift from them.
-ENV STRAWKNIGHT_PACKAGE="system-images;android-${ANDROID_API};${ANDROID_TAG};${ANDROID_ABI}" \
-    STRAWKNIGHT_API="${ANDROID_API}"
+ENV STRAWDROID_PACKAGE="system-images;android-${ANDROID_API};${ANDROID_TAG};${ANDROID_ABI}" \
+    STRAWDROID_API="${ANDROID_API}"
 
 # The AVD lives in the persistent volume, not in the image. It holds installed
 # apps, granted permissions and anything a test wrote, and losing that on every
@@ -216,12 +217,12 @@ RUN chmod +x \
     /usr/local/bin/print-banner.sh \
     /usr/local/bin/sk \
     /etc/s6-overlay/s6-rc.d/init-nologin/run \
-    /etc/s6-overlay/s6-rc.d/init-strawknight/run \
+    /etc/s6-overlay/s6-rc.d/init-strawdroid/run \
     /etc/s6-overlay/s6-rc.d/svc-emulator/run \
     /etc/s6-overlay/s6-rc.d/svc-adb-bridge/run \
     /etc/s6-overlay/s6-rc.d/svc-window-keeper/run \
     /etc/s6-overlay/s6-rc.d/svc-share-mirror/run \
-    /etc/s6-overlay/s6-rc.d/svc-strawknight-ready/run \
+    /etc/s6-overlay/s6-rc.d/svc-strawdroid-ready/run \
     /etc/s6-overlay/s6-rc.d/svc-branding/run \
     /defaults/autostart \
     /defaults/startwm.sh
@@ -232,14 +233,14 @@ RUN chmod +x \
 # start. Fail loudly if the path moves, because a silently missing icon is the
 # kind of thing that gets noticed months later.
 # ---------------------------------------------------------------------------
-COPY assets/icon.png /usr/local/share/strawknight-icon.png
+COPY assets/icon.png /usr/local/share/strawdroid-icon.png
 RUN set -eux; \
     dst=/usr/share/selkies/www/icon.png; \
     [ -f "$dst" ] || { echo "ERROR: $dst missing - the selkies base layout changed, update the branding override"; exit 1; }; \
-    cp /usr/local/share/strawknight-icon.png "$dst"; \
-    echo "strawknight: branded selkies icon at $dst"
+    cp /usr/local/share/strawdroid-icon.png "$dst"; \
+    echo "strawdroid: branded selkies icon at $dst"
 
-COPY assets/wallpaper.png /usr/local/share/strawknight-wallpaper.png
+COPY assets/wallpaper.png /usr/local/share/strawdroid-wallpaper.png
 
 ENV KEYBOARD_LAYOUT=us \
     GTK_THEME=Adwaita:dark \

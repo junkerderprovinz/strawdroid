@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Android-Hintergrundbild fuer StrawKnight.
+"""Android-Hintergrundbild fuer StrawDroid.
 
 Die Marke allein auf einer Flaeche war das Problem: das dunkle Rechteck des
 Emulators sah damit aus wie ein dunkles Rechteck mit einem Aufkleber. Der Grund

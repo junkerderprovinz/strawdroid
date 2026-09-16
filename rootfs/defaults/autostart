@@ -1,6 +1,6 @@
 #!/bin/sh
 # -----------------------------------------------------------------------------
-# StrawKnight autostart for linuxserver/baseimage-selkies
+# StrawDroid autostart for linuxserver/baseimage-selkies
 # -----------------------------------------------------------------------------
 # POSIX ONLY: openbox runs this with /bin/sh (dash). No bashisms.
 #
@@ -9,7 +9,7 @@
 # when it dies and a session-launched window does not. This script only sets the
 # background and the keymap, then returns.
 #
-# Refreshed on EVERY start by init-strawknight from /defaults/autostart, so an
+# Refreshed on EVERY start by init-strawdroid from /defaults/autostart, so an
 # image update to this file always takes effect.
 # -----------------------------------------------------------------------------
 
@@ -35,21 +35,21 @@ export GDK_BACKEND="${GDK_BACKEND:-x11}"
 # leftover with --image-bg, which is the same colour as the fallback below, so
 # the seam is invisible.
 xsetroot -solid '#161616' 2>/dev/null || true
-if command -v feh >/dev/null 2>&1 && [ -f /usr/local/share/strawknight-wallpaper.png ]; then
+if command -v feh >/dev/null 2>&1 && [ -f /usr/local/share/strawdroid-wallpaper.png ]; then
     feh --no-fehbg --bg-max --image-bg '#161616' \
-        /usr/local/share/strawknight-wallpaper.png 2>/dev/null || true
+        /usr/local/share/strawdroid-wallpaper.png 2>/dev/null || true
 fi
 
 # Bind a complete keymap so Shift resolves for pasted text. The Selkies base
 # starts Xvfb with no keymap at all, and typing into the emulator is half of
 # what this rig is for.
 if setxkbmap_out=$(setxkbmap -display "${DISPLAY:-:1}" -layout "${KEYBOARD_LAYOUT:-us}" 2>&1); then
-    echo "[strawknight-autostart] keymap: layout=${KEYBOARD_LAYOUT:-us} bound OK" >&2
+    echo "[strawdroid-autostart] keymap: layout=${KEYBOARD_LAYOUT:-us} bound OK" >&2
 else
-    echo "[strawknight-autostart] keymap: setxkbmap FAILED (layout=${KEYBOARD_LAYOUT:-us}): ${setxkbmap_out}" >&2
+    echo "[strawdroid-autostart] keymap: setxkbmap FAILED (layout=${KEYBOARD_LAYOUT:-us}): ${setxkbmap_out}" >&2
 fi
 
-echo "[strawknight-autostart] desktop up; the emulator window appears once Android has booted" >&2
+echo "[strawdroid-autostart] desktop up; the emulator window appears once Android has booted" >&2
 
 # No exec here on purpose: openbox runs autostart entries in the background and
 # carries on with its own session, so this script simply returns.

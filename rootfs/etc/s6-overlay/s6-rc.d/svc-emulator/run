@@ -11,7 +11,7 @@
 # over budtmo's: the window is a real X client on a desktop that is streamed
 # with WebRTC and encoded on the box's GPU, rather than a VNC framebuffer diff.
 # -----------------------------------------------------------------------------
-AVD_NAME="${AVD_NAME:-strawknight}"
+AVD_NAME="${AVD_NAME:-strawdroid}"
 
 # DISPLAY is set for the DESKTOP SESSION by the base image, not for every s6
 # service, so it has to be named here. Without it the emulator opens no window

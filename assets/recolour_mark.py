@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Dunkelfassung der StrawKnight-Marke: die Tinte hell, die Augen dunkel.
+"""Dunkelfassung der StrawDroid-Marke: die Tinte hell, die Augen dunkel.
 
 Die Zeichnung ist fuer hellen Grund gebaut. Auf dem dunklen Grund des Emulators
 passiert zweierlei: die beiden Aehren oben stehen frei und sind reines

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<!-- StrawKnight's openbox right-click menu. Seeded into
+<!-- StrawDroid's openbox right-click menu. Seeded into
      /config/.config/openbox/menu.xml on FIRST boot only (the base image's
      init-selkies-config: `if [[ ! -f "$CONF_DIR/menu.xml" ]]`). Edit this file
      and it takes effect on a fresh /config; an existing /config keeps whatever
@@ -15,7 +15,7 @@
         xsi:schemaLocation="http://openbox.org/
                 file:///usr/share/openbox/menu.xsd">
 
-<menu id="root-menu" label="StrawKnight">
+<menu id="root-menu" label="StrawDroid">
   <item label="Terminal">
     <action name="Execute"><execute>xterm</execute></action>
   </item>

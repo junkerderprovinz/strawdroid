@@ -33,7 +33,7 @@ done
 # title rather than the class avoids the emulator's three OTHER windows - a
 # 1x1 placeholder, a 100x30 stub and the tool strip - which are not the phone
 # and must not be moved on top of it.
-AVD_NAME="${AVD_NAME:-strawknight}"
+AVD_NAME="${AVD_NAME:-strawdroid}"
 TITLE="Android Emulator - ${AVD_NAME}"
 
 # The wallpaper is painted once, by the desktop session, and feh writes a
@@ -51,9 +51,9 @@ TITLE="Android Emulator - ${AVD_NAME}"
 letzte=""
 neu_zeichnen() {
     xsetroot -solid '#161616' 2>/dev/null || true
-    if command -v feh >/dev/null 2>&1 && [ -f /usr/local/share/strawknight-wallpaper.png ]; then
+    if command -v feh >/dev/null 2>&1 && [ -f /usr/local/share/strawdroid-wallpaper.png ]; then
         feh --no-fehbg --bg-max --image-bg '#161616' \
-            /usr/local/share/strawknight-wallpaper.png 2>/dev/null || true
+            /usr/local/share/strawdroid-wallpaper.png 2>/dev/null || true
     fi
 }
 

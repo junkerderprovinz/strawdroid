@@ -197,16 +197,16 @@ PASS_PCT = PASS / CYCLE * 100.0
 BUTTONS = [
     ("docker-image", "docker", "#1d63ed", "#ffffff",
      "Docker", "compose file", "Download the docker-compose file",
-     "https://github.com/junkerderprovinz/strawknight/releases/latest/download/docker-compose.yml"),
+     "https://github.com/junkerderprovinz/strawdroid/releases/latest/download/docker-compose.yml"),
     ("windows", "windows", "#0078d4", "#ffffff",
      "Windows", "start script", "Download the Windows start script",
-     "https://github.com/junkerderprovinz/strawknight/releases/latest/download/start-windows.ps1"),
+     "https://github.com/junkerderprovinz/strawdroid/releases/latest/download/start-windows.ps1"),
     ("linux", "linux", "#fcc624", "#1b1b1b",
      "Linux", "start script", "Download the Linux start script",
-     "https://github.com/junkerderprovinz/strawknight/releases/latest/download/start-linux.sh"),
+     "https://github.com/junkerderprovinz/strawdroid/releases/latest/download/start-linux.sh"),
     ("source-zip", "zip", "#4d5562", "#ffffff",
      "Source", "zip archive", "Download the source archive",
-     "https://github.com/junkerderprovinz/strawknight/archive/refs/heads/main.zip"),
+     "https://github.com/junkerderprovinz/strawdroid/archive/refs/heads/main.zip"),
 ]
 
 # THE README ROW is written here as well, between two markers, so a button added
@@ -223,7 +223,7 @@ BUTTONS = [
 # it loads. It serves any file in .github/assets/download-buttons/ of any
 # junkerderprovinz repository, so a new button needs no change there. Source and
 # measurements: junkerderprovinz/junkerderprovinz, donate/worker/.
-REPO = "strawknight"
+REPO = "strawdroid"
 BUTTON_HOST = "https://buttons.halleluja.design"
 README = os.path.join(HERE, "..", "README.md")
 ROW_OPEN = "<!-- download-buttons: written by scripts/gen_download_buttons.py -->"

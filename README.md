@@ -1,16 +1,16 @@
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/junkerderprovinz/strawknight/main/.github/assets/strawknight-banner-dark.png">
-    <img src="https://raw.githubusercontent.com/junkerderprovinz/strawknight/main/.github/assets/strawknight-banner.png" alt="StrawKnight" width="100%">
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/junkerderprovinz/strawdroid/main/.github/assets/strawdroid-banner-dark.png">
+    <img src="https://raw.githubusercontent.com/junkerderprovinz/strawdroid/main/.github/assets/strawdroid-banner.png" alt="StrawDroid" width="100%">
   </picture>
 </p>
 
 <p align="center">
-  <a href="https://github.com/junkerderprovinz/strawknight/actions/workflows/build.yml"><img src="https://img.shields.io/github/actions/workflow/status/junkerderprovinz/strawknight/build.yml?branch=main&label=Build&style=for-the-badge&logo=githubactions&logoColor=white" alt="Build" height="36"></a>&nbsp;
+  <a href="https://github.com/junkerderprovinz/strawdroid/actions/workflows/build.yml"><img src="https://img.shields.io/github/actions/workflow/status/junkerderprovinz/strawdroid/build.yml?branch=main&label=Build&style=for-the-badge&logo=githubactions&logoColor=white" alt="Build" height="36"></a>&nbsp;
   <a href="https://developer.android.com/about/versions/16"><img src="https://img.shields.io/badge/Android-16%20%7C%20API%2036-3ddc84?style=for-the-badge&logo=android&logoColor=white" alt="Android 16, API 36" height="36"></a>&nbsp;
   <a href="https://github.com/selkies-project/selkies"><img src="https://img.shields.io/badge/Selkies-WebRTC-393939?style=for-the-badge&logo=webrtc&logoColor=white" alt="Selkies" height="36"></a>&nbsp;
-  <a href="templates/strawknight.xml"><img src="https://img.shields.io/badge/Unraid-Template-f15a2c?style=for-the-badge&logo=unraid&logoColor=white" alt="Unraid Template" height="36"></a>&nbsp;
-  <a href="https://github.com/junkerderprovinz/strawknight/releases/latest"><img src="https://img.shields.io/github/v/release/junkerderprovinz/strawknight?style=for-the-badge&logo=github&logoColor=white&label=Release" alt="Release" height="36"></a>&nbsp;
+  <a href="templates/strawdroid.xml"><img src="https://img.shields.io/badge/Unraid-Template-f15a2c?style=for-the-badge&logo=unraid&logoColor=white" alt="Unraid Template" height="36"></a>&nbsp;
+  <a href="https://github.com/junkerderprovinz/strawdroid/releases/latest"><img src="https://img.shields.io/github/v/release/junkerderprovinz/strawdroid?style=for-the-badge&logo=github&logoColor=white&label=Release" alt="Release" height="36"></a>&nbsp;
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-AGPL--3.0-blue?style=for-the-badge&logo=gnu&logoColor=white" alt="License: AGPL-3.0" height="36"></a>
 </p>
 
@@ -24,13 +24,13 @@
 
 <!-- download-buttons: written by scripts/gen_download_buttons.py -->
 <p align="center">
-  <a href="https://github.com/junkerderprovinz/strawknight/releases/latest/download/docker-compose.yml"><img src="https://buttons.halleluja.design/strawknight/docker-image.svg" alt="Download the docker-compose file" width="195"></a>
+  <a href="https://github.com/junkerderprovinz/strawdroid/releases/latest/download/docker-compose.yml"><img src="https://buttons.halleluja.design/strawdroid/docker-image.svg" alt="Download the docker-compose file" width="195"></a>
   &nbsp;
-  <a href="https://github.com/junkerderprovinz/strawknight/releases/latest/download/start-windows.ps1"><img src="https://buttons.halleluja.design/strawknight/windows.svg" alt="Download the Windows start script" width="195"></a>
+  <a href="https://github.com/junkerderprovinz/strawdroid/releases/latest/download/start-windows.ps1"><img src="https://buttons.halleluja.design/strawdroid/windows.svg" alt="Download the Windows start script" width="195"></a>
   &nbsp;
-  <a href="https://github.com/junkerderprovinz/strawknight/releases/latest/download/start-linux.sh"><img src="https://buttons.halleluja.design/strawknight/linux.svg" alt="Download the Linux start script" width="195"></a>
+  <a href="https://github.com/junkerderprovinz/strawdroid/releases/latest/download/start-linux.sh"><img src="https://buttons.halleluja.design/strawdroid/linux.svg" alt="Download the Linux start script" width="195"></a>
   &nbsp;
-  <a href="https://github.com/junkerderprovinz/strawknight/archive/refs/heads/main.zip"><img src="https://buttons.halleluja.design/strawknight/source-zip.svg" alt="Download the source archive" width="195"></a>
+  <a href="https://github.com/junkerderprovinz/strawdroid/archive/refs/heads/main.zip"><img src="https://buttons.halleluja.design/strawdroid/source-zip.svg" alt="Download the source archive" width="195"></a>
 </p>
 <!-- /download-buttons -->
 
@@ -74,7 +74,7 @@ If it has earned a place on your server or computer, toss a coin to your knight:
 
 ## 1. What it is
 
-A straw knight is the practice dummy: built in the shape of the real thing so somebody can strike at it without anybody getting hurt.
+A straw droid is a practice dummy shaped like an Android phone: built like the real thing so somebody can strike at it without anybody getting hurt.
 
 This container runs the **real Android emulator** - the same AVD Android Studio starts - headless on a [Selkies](https://github.com/selkies-project/selkies) desktop. The screen arrives in a browser over WebRTC, and `adb` reaches it over the network, so Android Studio deploys and debugs on it exactly like a phone on a cable.
 
@@ -139,17 +139,17 @@ Only one level is installed, and that has a consequence: an AVD in the persisten
 Needs `/dev/kvm`. On bare metal that is simply there; no nested virtualisation is involved. Without it the emulator does not start, and the container log says so in as many words rather than leaving a black rectangle.
 
 ```
-docker run -d --name StrawKnight \
+docker run -d --name StrawDroid \
   --device=/dev/kvm --shm-size=2gb --cpus="4" --memory="8g" \
   -e PUID=99 -e PGID=100 \
   -p 3001:3001 -p 5555:5555 \
   -v /path/to/config:/config \
-  ghcr.io/junkerderprovinz/strawknight:latest
+  ghcr.io/junkerderprovinz/strawdroid:latest
 ```
 
 `PUID` and `PGID` decide who owns `/config`, and they should be the user that owns the directory on the host. The defaults above are Unraid's `nobody:users`; on a plain Linux box `$(id -u):$(id -g)` is usually what you want.
 
-On Unraid use [`templates/strawknight.xml`](templates/strawknight.xml), which puts it on its own IP so no port mapping is needed.
+On Unraid use [`templates/strawdroid.xml`](templates/strawdroid.xml), which puts it on its own IP so no port mapping is needed.
 
 **It is deliberately not set to restart on its own.** An emulator is a virtual machine and holds its memory whether anybody is testing or not: measured idle, with no app installed, about 6 GB. Start it when it is needed and stop it after.
 
@@ -245,7 +245,7 @@ You do not have to take my word for it. The code is open and every release note 
 
 ## 11. Support this project
 
-Problems, wishes or suggestions? You're welcome to [open an issue](https://github.com/junkerderprovinz/strawknight/issues).
+Problems, wishes or suggestions? You're welcome to [open an issue](https://github.com/junkerderprovinz/strawdroid/issues).
 
 A one-knight job: I build it, keep it running, work through the issues and add what people ask for, until nothing is missing. It is free, with no accounts, no telemetry, no ads and no paid tier. No asterisk anywhere. Nothing readable ever leaves your own walls. Forged on evenings and weekends, with heart and stubbornness.
 

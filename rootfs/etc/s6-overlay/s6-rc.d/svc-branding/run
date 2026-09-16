@@ -3,7 +3,7 @@
 # -----------------------------------------------------------------------------
 # svc-branding - the mark on the phone itself
 # -----------------------------------------------------------------------------
-# Puts the StrawKnight wallpaper behind the launcher and makes the app icons
+# Puts the StrawDroid wallpaper behind the launcher and makes the app icons
 # monochrome, once per device, on the first boot of a fresh AVD.
 #
 # WHY THIS COPIES FILES INSTEAD OF CALLING A COMMAND. Android has no way to set
@@ -20,7 +20,7 @@
 # Dockerfile pins one: android-36, google_apis, x86_64. If that pin moves, set
 # the wallpaper by hand once on the new image and refresh these three files.
 #
-# A LONGRUN, NOT A ONESHOT, for the same reason svc-strawknight-ready is one:
+# A LONGRUN, NOT A ONESHOT, for the same reason svc-strawdroid-ready is one:
 # the work cannot start until Android has booted, which takes minutes on a cold
 # first start, and a oneshot that blocks the dependency chain that long would
 # hold up every service behind it. It does its work and then sleeps.
@@ -31,16 +31,16 @@
 # -----------------------------------------------------------------------------
 QUELLE=/defaults/android
 APK=/defaults/apk
-MARKE=/config/.strawknight-branding
+MARKE=/config/.strawdroid-branding
 ZIEL=/data/system/users/0
 
-# svc-strawknight-ready holds its READY line until this file appears, so that
+# svc-strawdroid-ready holds its READY line until this file appears, so that
 # the framework restart below does not happen in front of somebody who has just
 # been told the rig is ready. It is set on EVERY path out of here, the ones
 # where nothing was done included: a service that gives up silently would hold
 # the READY line for its full timeout and look like a hang.
 fertig() {
-    touch /run/strawknight-branding-done
+    touch /run/strawdroid-branding-done
     exec sleep infinity
 }
 

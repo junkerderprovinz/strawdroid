@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# StrawKnight on Linux.
+# StrawDroid on Linux.
 #
 #   chmod +x start-linux.sh && ./start-linux.sh
 #
@@ -13,8 +13,8 @@
 # anything is downloaded, and named when it is missing.
 set -euo pipefail
 
-IMAGE="ghcr.io/junkerderprovinz/strawknight:latest"
-NAME="StrawKnight"
+IMAGE="ghcr.io/junkerderprovinz/strawdroid:latest"
+NAME="StrawDroid"
 PORT="${PORT:-3001}"
 ADB_PORT="${ADB_PORT:-5555}"
 
@@ -69,7 +69,7 @@ docker rm -f "$NAME" >/dev/null 2>&1 || true
 docker run -d --name "$NAME" \
     --device=/dev/kvm \
     -p "${PORT}:3001" -p "${ADB_PORT}:5555" \
-    -v strawknight-config:/config \
+    -v strawdroid-config:/config \
     --shm-size=2gb --cpus="4" --memory="8g" \
     -e PUID="${PUID}" -e PGID="${PGID}" \
     -e TZ="$(cat /etc/timezone 2>/dev/null || echo UTC)" \
