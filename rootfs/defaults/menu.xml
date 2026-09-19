@@ -1,14 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<!-- StrawDroid's openbox right-click menu. Seeded into
-     /config/.config/openbox/menu.xml on FIRST boot only (the base image's
-     init-selkies-config: `if [[ ! -f "$CONF_DIR/menu.xml" ]]`). Edit this file
-     and it takes effect on a fresh /config; an existing /config keeps whatever
-     menu is already there, including hand edits made later.
-
-     The entries are the two things somebody actually reaches for while the
-     emulator window is on screen: a shell to talk to the phone with, and a way
-     to put it back when a stray click has lost it behind something. -->
+<!-- The base image's init-selkies-config copies this to
+     /config/.config/openbox/menu.xml on first boot only, so a change here
+     reaches a fresh /config and an existing one keeps its menu. -->
 
 <openbox_menu xmlns="http://openbox.org/"
         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"

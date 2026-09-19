@@ -1,10 +1,7 @@
 #!/usr/bin/env bash
-# ─────────────────────────────────────────────────────────────────
-# print-banner.sh <container-name> <subtitle>
-# Shared init-log banner, same script as krusader/jdownloader/handbrake.
-# Crucible ships no banner-raw.txt (internal container, no brand art) so this
-# always takes the plain-text fallback branch below.
-# ─────────────────────────────────────────────────────────────────
+# Usage: print-banner.sh <container-name> <subtitle>
+# Prints the init-log banner shared by the junkerderprovinz containers, falling
+# back to plain text when the image ships no banner art.
 
 CONTAINER="${1:-Container}"
 SUBTITLE="${2:-}"

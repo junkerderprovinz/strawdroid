@@ -1,55 +1,30 @@
 #!/usr/bin/with-contenv bash
 # shellcheck shell=bash
-# -----------------------------------------------------------------------------
-# svc-share-mirror - the share, visible to the phone's own file manager
-# -----------------------------------------------------------------------------
-# jdp: "kannst du den download share im Android emulator einbinden, dass ich von
-# dort aus mit dem dateimanager drauf zugriff habe?"
+# Mirrors the share into the phone so its own file manager can reach it. The
+# emulated phone is a virtual machine with its own kernel and disk, so no host
+# directory can be mounted into it; the emulator has no shared folders, the
+# Files app has no SMB client, and an SD card image is a snapshot. adb crosses
+# the boundary, so this copies.
 #
-# MIRRORED, not mounted, and the difference is not a shortcut - it is the only
-# thing available. The emulated phone is a virtual machine with its own kernel
-# and its own disk image; a directory on the host is not reachable from inside
-# it by any mount. The emulator has no shared-folder feature, Android has no
-# SMB client in its own Files app, and an SD card image is a snapshot rather
-# than a live folder. What DOES cross the boundary is adb, so this copies.
+# Host to phone only, matching the share's read-only mount, because the rig runs
+# unfinished code. The files land in /sdcard/Download/share, where the Files
+# app looks and the SAF picker offers them without granting a tree first.
 #
-# One direction only, host to phone, matching the share's own read-only mount.
-# The rig runs unfinished code and that code has no business writing into a
-# share full of everything else.
-#
-# Into /sdcard/Download/share, so it lands under Downloads where the stock
-# Files app looks and where the SAF picker offers it without anybody having to
-# grant a tree first.
-#
-# THE TOP LEVEL ONLY, files and not the tree underneath. That is a decision the
-# first real run made for me: the share on Unraid is the download folder, it
-# held 49,000 files, and one recursive pass took 100 seconds against a
-# 30-second interval - so the service was never not copying. It was 228 MB and
-# comfortably under the size cap, because the cost was COUNT rather than bytes.
-# This share's job here is "drop a build in, install it on the phone", which is
-# a handful of files at the top; a tree of test data underneath is a different
-# job and `sk push <dir>` does that one on demand.
-#
-# `adb push --sync` is what makes this cheap: it compares timestamps and sizes
-# and only sends what differs, so the steady state is one comparison every
-# thirty seconds and no traffic. Without it a 33 MB APK would be copied twice a
-# minute forever.
-# -----------------------------------------------------------------------------
+# Only the top-level files are mirrored, because a recursive pass over a
+# download share of 49,000 files takes 100 seconds against a 30-second
+# interval. The use here is dropping in a build to install; `sk push <dir>`
+# copies a tree on demand.
 SHARE="${SHARE_DIR:-/share}"
 DEST="/sdcard/Download/share"
 EVERY="${SHARE_MIRROR_SECONDS:-30}"
 
 if [ ! -d "${SHARE}" ]; then
-    echo "[svc-share-mirror] no ${SHARE} mounted - nothing to mirror"
-    # Sleeping rather than exiting: s6 restarts a longrun that exits, so a
-    # container started without the share would spin here forever writing the
-    # same line into the log.
+    echo "[svc-share-mirror] no ${SHARE} mounted, nothing to mirror"
+    # s6 restarts a longrun that exits, which would repeat this line forever.
     exec sleep infinity
 fi
 
-# The device has to exist before anything can be pushed to it, and a cold start
-# is minutes. Waiting here rather than failing means the mirror is simply there
-# once the phone is, without anybody having to restart a service.
+# A cold start takes minutes.
 for _ in $(seq 1 180); do
     [ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r\n')" = "1" ] && break
     sleep 5
@@ -63,22 +38,14 @@ wanted="$(mktemp)"
 trap 'rm -f "${wanted}"' EXIT
 
 while :; do
-    # A CAP, because the share this is pointed at on Unraid is the download
-    # folder - a place whose whole job is to grow. Measured when this was
-    # written: 228 MB of share against 3.7 GB free on the device, comfortable.
-    # One evening of downloading and that reverses, and the failure mode
-    # without a cap is the emulator's disk filling silently, which surfaces
-    # later as an app that will not install for reasons that have nothing to do
-    # with the app.
-    #
-    # Refused rather than truncated: a mirror that quietly copies some of a
-    # folder is worse than one that says it stopped, because the missing file
-    # is the one somebody is looking for.
+    # A download share grows, and a full emulator disk later shows up as an app
+    # that will not install. Over the cap nothing is mirrored rather than part
+    # of the share, because a partial mirror hides which file is missing.
     size="$(du -sm "${SHARE}" 2>/dev/null | cut -f1)"
     if [ -n "${size}" ] && [ "${size}" -gt "${SHARE_MIRROR_MAX_MB:-2048}" ]; then
-        # Said ONCE per crossing, not every thirty seconds.
+        # Logged once per crossing, not on every pass.
         if [ "${too_big}" != "yes" ]; then
-            echo "[svc-share-mirror] ${SHARE} is ${size} MB, over the ${SHARE_MIRROR_MAX_MB:-2048} MB cap - not mirroring."
+            echo "[svc-share-mirror] ${SHARE} is ${size} MB, over the ${SHARE_MIRROR_MAX_MB:-2048} MB cap; not mirroring."
             echo "[svc-share-mirror] Point the mount at a smaller folder, or raise SHARE_MIRROR_MAX_MB. 'sk install' still works."
             too_big="yes"
         fi
@@ -86,23 +53,10 @@ while :; do
         continue
     fi
     if [ "${too_big}" = "yes" ]; then
-        echo "[svc-share-mirror] ${SHARE} is back under the cap at ${size} MB - mirroring again"
+        echo "[svc-share-mirror] ${SHARE} is back under the cap at ${size} MB, mirroring again"
         too_big=""
     fi
 
-    # The TOP LEVEL, files only, and not the tree underneath.
-    #
-    # This started as a recursive mirror and the first run on a real share
-    # settled it: 49,000 files, of which 12,331 moved, in 100 seconds - against
-    # a 30-second interval, so the service was never not copying. The share was
-    # 228 MB and comfortably under the size cap, because the cost there is
-    # COUNT, not bytes. A cap on size does not see it coming.
-    #
-    # The shape is the answer rather than a bigger cap. This share's job here
-    # is "drop a build in, install it on the phone", and that is a handful of
-    # files sitting at the top. A folder of test data underneath is a different
-    # job, and `sk push <dir>` does that one on demand, for the one directory
-    # somebody actually wants.
     moved=0
     failed=0
     for file in "${SHARE}"/*; do
@@ -114,25 +68,15 @@ while :; do
         if out="$(adb push --sync "${file}" "${DEST}/${name}" 2>&1)"; then
             case "${out}" in *"0 files pushed"*|*"skipped"*) : ;; *) moved=$((moved + 1)) ;; esac
         else
-            # LOUD. The first version only logged on success, so a push that
-            # failed said nothing at all and the mirror looked like it was
-            # simply idle - which is how the missing files went unnoticed.
             echo "[svc-share-mirror] could not send ${name}: ${out##*$'\n'}"
             failed=$((failed + 1))
         fi
     done
 
-    # Gone on the host means gone on the phone. `adb push --sync` only ever
-    # adds and updates, so without this the device keeps every build ever
-    # dropped into the share - and the one thing worse than not finding the new
-    # APK is tapping last week's by mistake.
-    #
-    # Anything not in the share, including directories, and that is within this
-    # service's business rather than outside it: DEST is created by the mirror,
-    # named after the share and holding nothing else. `-rf` rather than `-f`
-    # because a leftover DIRECTORY is exactly what the first version left
-    # behind - `rm -f` refuses one, so a folder from the recursive era sat
-    # there looking like part of the share long after it had been dropped.
+    # `adb push --sync` only adds and updates, so whatever left the share is
+    # removed here, or the device would keep every old build. DEST belongs to
+    # the mirror alone, so anything in it that is not in the share goes,
+    # directories included.
     removed=0
     while IFS= read -r name; do
         [ -n "${name}" ] || continue
@@ -143,9 +87,8 @@ while :; do
 
     if [ "${moved}" -gt 0 ] || [ "${removed}" -gt 0 ]; then
         echo "[svc-share-mirror] ${moved} sent, ${removed} removed"
-        # The media scanner is what makes a copied file VISIBLE to the Files
-        # app and to the picker. Without it the file is on the disk and absent
-        # from every chooser, which reads as the mirror having silently failed.
+        # Until the media scanner sees a file, the Files app and the picker do
+        # not show it.
         adb shell am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE \
             -d "file://${DEST}" >/dev/null 2>&1 || true
     fi

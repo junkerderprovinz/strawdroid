@@ -1,20 +1,13 @@
 #!/usr/bin/with-contenv bash
 # shellcheck shell=bash
-# -----------------------------------------------------------------------------
-# init-strawdroid - make the phone, once, and keep it
-# -----------------------------------------------------------------------------
-# Runs as an s6-rc oneshot AFTER init-selkies-config, because that base oneshot
-# seeds /config/.config/openbox/{autostart,menu.xml} from /defaults on first
-# boot. autostart is force-refreshed on EVERY start here so an image update to
-# it always takes effect; menu.xml is deliberately left first-boot-only, so hand
-# edits somebody makes later survive.
+# Runs after init-selkies-config, which seeds openbox's autostart and menu.xml
+# from /defaults on first boot only. The autostart is copied again on every
+# start so an image update reaches it; menu.xml stays first-boot-only so hand
+# edits survive.
 #
-# The AVD is created in /config and NEVER recreated if it is already there. That
-# is the whole reason it lives in the volume: it holds the installed app, the
-# folder permission granted through the SAF picker, and whatever a test wrote.
-# Rebuilding it on every start would silently reset the very state the rig
-# exists to exercise, and it would look like the app forgetting its permission.
-# -----------------------------------------------------------------------------
+# The AVD is created once in /config and kept. It holds the installed app, the
+# folder permission granted through the SAF picker and whatever a test wrote,
+# and recreating it would look like the app forgetting its permission.
 set -e
 
 log() { echo "[init-strawdroid] $*"; }
@@ -29,30 +22,22 @@ cp -af /defaults/autostart "${CONFIG_HOME}/openbox/autostart"
 chmod 0755 "${CONFIG_HOME}/openbox/autostart"
 log "autostart synced from /defaults/autostart"
 
-# KVM first, and loudly. Without it the emulator either refuses to start or
-# falls back to an interpreter so slow the rig is unusable, and both failures
-# look like "the container is broken" from outside. Naming the missing device
-# here turns a mystery into a one-line fix on the Unraid template.
+# Without KVM the emulator refuses to start or crawls, and from outside either
+# looks like a broken container, so the missing device is named here.
 if [ -c /dev/kvm ] && [ -r /dev/kvm ] && [ -w /dev/kvm ]; then
     log "KVM available"
 else
-    log "WARNING: /dev/kvm is missing or not writable - add --device=/dev/kvm to this container."
+    log "WARNING: /dev/kvm is missing or not writable; add --device=/dev/kvm to this container."
     log "WARNING: without it the emulator will not start."
 fi
 
 AVD_NAME="${AVD_NAME:-strawdroid}"
 AVD_DIR="/config/.android/avd/${AVD_NAME}.avd"
 
-# An AVD names its system image by PATH, and the image ships only one Android
-# level. Raise the level and the device in the volume points at a directory that
-# is no longer here: the emulator then fails with a message about a missing
-# kernel, which reads as a broken image rather than as "your device is older
-# than your container".
-#
-# So the device is checked before it is trusted, and a stale one is moved ASIDE
-# rather than deleted. Everything installed on it is gone either way once its
-# system image is, but a folder somebody can still look into beats a folder that
-# silently stopped existing.
+# An AVD names its system image by path, and the container image ships only one
+# Android level. After a level bump the emulator would fail with a message about a
+# missing kernel, so a stale device is moved aside rather than deleted, where
+# somebody can still look into it.
 if [ -d "${AVD_DIR}" ]; then
     sysdir="$(sed -n 's/^image\.sysdir\.1=//p' "${AVD_DIR}/config.ini" 2>/dev/null | tr -d '\r')"
     if [ -n "${sysdir}" ] && [ ! -d "${ANDROID_SDK_ROOT}/${sysdir}" ]; then
@@ -69,19 +54,17 @@ if [ -d "${AVD_DIR}" ]; then
     log "AVD ${AVD_NAME} already exists, keeping it and everything installed on it"
 else
     log "creating AVD ${AVD_NAME} from ${STRAWDROID_PACKAGE} (device ${EMULATOR_DEVICE})"
-    # --device names a hardware profile: screen size and density, which is what
-    # a layout is actually judged against. An AVD with no profile gets a generic
-    # square that resembles no phone anybody owns.
+    # Without a hardware profile the AVD gets a generic square screen that
+    # resembles no real phone.
     echo "no" | avdmanager create avd \
         --name "${AVD_NAME}" \
         --package "${STRAWDROID_PACKAGE}" \
         --device "${EMULATOR_DEVICE}" \
         --force >/dev/null
 
-    # More memory and a real disk than avdmanager's defaults. The stock 384 MB
-    # of RAM and 800 MB of storage cannot hold an app plus the files a sync tool
-    # is meant to move, and running out of either fails as a crash rather than
-    # as a message.
+    # avdmanager's 384 MB of RAM and 800 MB of storage cannot hold an app plus
+    # the files a sync tool moves, and running out of either shows up as a
+    # crash.
     cfg="${AVD_DIR}/config.ini"
     {
         echo "hw.ramSize=${EMULATOR_RAM}"
@@ -91,21 +74,10 @@ else
     log "AVD created"
 fi
 
-# chown to `abc`, the user the emulator actually runs as, NOT to a hardcoded
-# fallback. The base image remaps abc to PUID:PGID in init-adduser, so this is
-# the same thing on Unraid and the right thing everywhere else.
-#
-# The old line read `${PUID:-99}:${PGID:-100}` and only agreed with reality
-# because Unraid always sets PUID=99. A plain `docker run` without it left the
-# AVD directory owned by 99 while svc-emulator ran as abc, uid 911. The
-# emulator then could not write qemu-version.txt, its first start died, and
-# every restart after that hit the leftover lock:
-#
-#   FATAL | A snapshot operation for 'strawdroid' is pending and timeout has
-#           expired. Exiting...
-#
-# which reads like a corrupt AVD and is a permission bit. Measured on
-# 2026-09-13 with the docker run command the README documents.
+# abc is the user the emulator runs as, remapped to PUID:PGID by init-adduser.
+# A default of 99:100 would be wrong when PUID is unset (abc is then 911), and
+# the emulator would fail with "A snapshot operation ... is pending", which
+# looks like a corrupt AVD.
 chown -R abc:abc \
     "${CONFIG_HOME}" "/config/.local" "/config/.cache" "/config/.android" 2>/dev/null || true
 

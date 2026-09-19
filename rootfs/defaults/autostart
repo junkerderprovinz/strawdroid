@@ -1,17 +1,9 @@
 #!/bin/sh
-# -----------------------------------------------------------------------------
-# StrawDroid autostart for linuxserver/baseimage-selkies
-# -----------------------------------------------------------------------------
-# POSIX ONLY: openbox runs this with /bin/sh (dash). No bashisms.
+# openbox runs this with /bin/sh (dash), so no bashisms.
 #
-# There is nothing to launch here. The emulator is started by its own s6
-# service, not from the desktop session, because it has to come back on its own
-# when it dies and a session-launched window does not. This script only sets the
-# background and the keymap, then returns.
-#
-# Refreshed on EVERY start by init-strawdroid from /defaults/autostart, so an
-# image update to this file always takes effect.
-# -----------------------------------------------------------------------------
+# The emulator is started by its own s6 service, which restarts it when it
+# dies, so this only sets the background and the keymap. init-strawdroid
+# copies it into /config on every start.
 
 export XDG_CONFIG_HOME="/config/.config"
 export XDG_DATA_HOME="/config/.local/share"
@@ -24,25 +16,22 @@ esac
 export GTK_THEME="${GTK_THEME:-Adwaita:dark}"
 export GDK_BACKEND="${GDK_BACKEND:-x11}"
 
-# The wallpaper carries a line saying the phone may still be booting. Without
-# it, the thirty to ninety seconds before the emulator window appears is a black
-# rectangle, which is indistinguishable from a container that failed to start.
+# The wallpaper says the phone may still be booting; without it the half
+# minute before the emulator window appears is a black rectangle that looks
+# like a failed start.
 #
-# --bg-max, not --bg-fill. Selkies resizes the desktop to whatever the browser
-# window is, so the ratio is never the image's. `--bg-fill` covers by cropping,
-# and on the first README screenshot that cut the mark in half and pushed the
-# sentence off the right edge. `--bg-max` fits the whole image and pays for the
-# leftover with --image-bg, which is the same colour as the fallback below, so
-# the seam is invisible.
+# --bg-max rather than --bg-fill: Selkies resizes the desktop to the browser
+# window, so the ratio never matches the image, and --bg-fill crops the mark
+# and the sentence. --bg-max fits the whole image and fills the rest with
+# --image-bg in the same colour as the fallback.
 xsetroot -solid '#161616' 2>/dev/null || true
 if command -v feh >/dev/null 2>&1 && [ -f /usr/local/share/strawdroid-wallpaper.png ]; then
     feh --no-fehbg --bg-max --image-bg '#161616' \
         /usr/local/share/strawdroid-wallpaper.png 2>/dev/null || true
 fi
 
-# Bind a complete keymap so Shift resolves for pasted text. The Selkies base
-# starts Xvfb with no keymap at all, and typing into the emulator is half of
-# what this rig is for.
+# The Selkies base starts Xvfb without a keymap, so Shift does not resolve for
+# pasted text until a full one is bound.
 if setxkbmap_out=$(setxkbmap -display "${DISPLAY:-:1}" -layout "${KEYBOARD_LAYOUT:-us}" 2>&1); then
     echo "[strawdroid-autostart] keymap: layout=${KEYBOARD_LAYOUT:-us} bound OK" >&2
 else
@@ -50,6 +39,3 @@ else
 fi
 
 echo "[strawdroid-autostart] desktop up; the emulator window appears once Android has booted" >&2
-
-# No exec here on purpose: openbox runs autostart entries in the background and
-# carries on with its own session, so this script simply returns.

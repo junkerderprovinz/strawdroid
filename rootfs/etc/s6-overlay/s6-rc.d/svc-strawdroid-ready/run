@@ -1,21 +1,11 @@
 #!/usr/bin/with-contenv bash
 # shellcheck shell=bash
-# -----------------------------------------------------------------------------
-# svc-strawdroid-ready - say when the phone is actually usable
-# -----------------------------------------------------------------------------
-# House standard: every own-image container prints an "<APP> IS READY" line as
-# the last block of its log.
-#
-# Here the bar is higher than elsewhere, and deliberately. A desktop that serves
-# while the emulator is still booting is not ready for anything: an `adb install`
-# against it fails, and a person opening the WebUI sees a black rectangle. So
-# this waits for the WebUI AND for Android to report a completed boot, and says
-# which of the two it is still waiting on.
-# -----------------------------------------------------------------------------
+# Prints the "READY" banner as the last block of the container log once both the
+# WebUI serves and Android has finished booting, and otherwise names which of
+# the two is missing. A desktop over a still-booting emulator is not usable yet.
 FLAG="/run/strawdroid-ready.printed"
 
-# /run is tmpfs, wiped on every container start, so the banner prints once per
-# start rather than once per image.
+# /run is a tmpfs, so the banner prints once per container start.
 if [[ -f "${FLAG}" ]]; then
     exec sleep infinity
 fi
@@ -30,9 +20,7 @@ for _ in $(seq 1 150); do
     sleep 2
 done
 
-# The phone. A cold first boot creates the data partition and takes minutes, so
-# this waits considerably longer than the WebUI check does; a rig that gave up
-# after thirty seconds would report a failure on every first start.
+# A cold first boot creates the data partition and takes minutes.
 booted=0
 for _ in $(seq 1 300); do
     if [[ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r\n')" == "1" ]]; then
@@ -42,13 +30,9 @@ for _ in $(seq 1 300); do
     sleep 2
 done
 
-# svc-branding restarts the Android framework after it has written the
-# wallpaper, and on the first start of a fresh AVD that lands right about here.
-# Without this wait the log would say READY and the phone would then reboot in
-# front of whoever just read it, which is exactly what a crash looks like.
-#
-# Bounded, and deliberately: if svc-branding never runs at all, the READY line
-# still arrives, a little late, instead of never.
+# On a fresh AVD svc-branding restarts the Android framework at about this
+# point, which right after a READY line would look like a crash. The wait is
+# bounded so the banner still arrives if svc-branding never runs.
 if [[ "${booted}" -eq 1 ]]; then
     for _ in $(seq 1 90); do
         [[ -f /run/strawdroid-branding-done ]] && break
@@ -78,9 +62,7 @@ if [[ "${web}" -eq 1 && "${booted}" -eq 1 ]]; then
     echo "    Deploy:  adb connect ${own_ip}:${ADB_DEVICE_PORT:-5555}"
     echo "    Doze:    adb -s ${own_ip}:${ADB_DEVICE_PORT:-5555} shell dumpsys deviceidle force-idle"
 elif [[ "${web}" -eq 1 ]]; then
-    # Named separately because the two failures have nothing to do with each
-    # other: a desktop that never served is a Selkies problem, and a phone that
-    # never booted is almost always a missing /dev/kvm.
+    # A phone that never booted almost always means a missing /dev/kvm.
     echo -e "  ${RED}✗ STRAWDROID IS NOT READY${NC} - the desktop serves but Android never finished booting"
     echo "    The usual cause is a missing --device=/dev/kvm on this container; check the log above."
 else
@@ -89,5 +71,5 @@ fi
 echo ""
 
 touch "${FLAG}"
-# Longrun: stay up so s6 does not restart us and re-print the banner.
+# A longrun that exits would be restarted by s6 and print the banner again.
 exec sleep infinity

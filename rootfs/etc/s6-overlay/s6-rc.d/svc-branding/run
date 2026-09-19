@@ -1,44 +1,28 @@
 #!/usr/bin/with-contenv bash
 # shellcheck shell=bash
-# -----------------------------------------------------------------------------
-# svc-branding - the mark on the phone itself
-# -----------------------------------------------------------------------------
 # Puts the StrawDroid wallpaper behind the launcher and makes the app icons
-# monochrome, once per device, on the first boot of a fresh AVD.
+# monochrome, once, on the first boot of a fresh AVD.
 #
-# WHY THIS COPIES FILES INSTEAD OF CALLING A COMMAND. Android has no way to set
-# a wallpaper from a shell: `cmd wallpaper` knows dimming and nothing else, and
-# the only code path that reaches WallpaperManager.setBitmap is the "Wallpaper
-# and style" screen. So the picture was set there once by hand, the three files
-# the system wrote were kept, and this service copies them back. The bytes in
-# defaults/android are the system's own, not ours: the file the picker wrote is
-# re-encoded and matched to the crop rectangles in wallpaper_info.xml, so
-# shipping our source PNG under that name would pair a picture with a crop that
-# was computed for a different one.
+# Android cannot set a wallpaper from a shell: `cmd wallpaper` only knows
+# dimming, and WallpaperManager.setBitmap is reachable only from the "Wallpaper
+# and style" screen. So the wallpaper was set there once by hand and the three
+# files the system wrote are copied back. They are the system's own bytes, with
+# the picture re-encoded to match the crop rectangles in wallpaper_info.xml, so
+# they belong to the pinned system image (android-36, google_apis, x86_64). If
+# that pin moves, set the wallpaper by hand on the new image and refresh them.
 #
-# That ties this to the system image, and that is acceptable here because the
-# Dockerfile pins one: android-36, google_apis, x86_64. If that pin moves, set
-# the wallpaper by hand once on the new image and refresh these three files.
-#
-# A LONGRUN, NOT A ONESHOT, for the same reason svc-strawdroid-ready is one:
-# the work cannot start until Android has booted, which takes minutes on a cold
-# first start, and a oneshot that blocks the dependency chain that long would
-# hold up every service behind it. It does its work and then sleeps.
-#
-# ONCE PER DEVICE, not once per start. The marker lives in /config, beside the
-# AVD it belongs to, so a new AVD gets the branding and a person who changed
-# their own wallpaper afterwards keeps their choice.
-# -----------------------------------------------------------------------------
+# A longrun rather than a oneshot, like svc-strawdroid-ready: it has to wait
+# minutes for Android to boot, and a oneshot would hold up every service behind
+# it. The marker lives in /config beside the AVD, so a new AVD gets the branding
+# and a wallpaper somebody chose afterwards stays.
 QUELLE=/defaults/android
 APK=/defaults/apk
 MARKE=/config/.strawdroid-branding
 ZIEL=/data/system/users/0
 
-# svc-strawdroid-ready holds its READY line until this file appears, so that
-# the framework restart below does not happen in front of somebody who has just
-# been told the rig is ready. It is set on EVERY path out of here, the ones
-# where nothing was done included: a service that gives up silently would hold
-# the READY line for its full timeout and look like a hang.
+# svc-strawdroid-ready holds its READY line until this file exists, so the
+# framework restart below does not happen right after it. Every exit path sets
+# it; otherwise the READY line would wait out its full timeout.
 fertig() {
     touch /run/strawdroid-branding-done
     exec sleep infinity
@@ -64,8 +48,8 @@ if ! warte_auf_start; then
     fertig
 fi
 
-# adb root is what makes the rest possible at all. On a production build it
-# fails and the service says so rather than leaving a trail of denied writes.
+# adb root fails on a production build, and without it every write below would
+# be denied.
 if ! adb root >/dev/null 2>&1 || ! warte_auf_start; then
     echo "[svc-branding] adb root nicht moeglich, Hintergrundbild bleibt Standard"
     fertig
@@ -73,8 +57,7 @@ fi
 
 echo "[svc-branding] Hintergrundbild und einfarbige Symbole werden gesetzt"
 
-# wallpaper and wallpaper_orig are the same bytes on the device, so one file
-# ships and is written twice.
+# wallpaper and wallpaper_orig are the same bytes on the device.
 for f in wallpaper wallpaper_orig; do
     adb push "${QUELLE}/wallpaper" "/data/local/tmp/${f}" >/dev/null 2>&1
     adb shell cp "/data/local/tmp/${f}" "${ZIEL}/${f}"
@@ -88,84 +71,49 @@ adb shell chown system:system "${ZIEL}/wallpaper" "${ZIEL}/wallpaper_orig" "${ZI
 adb shell chmod 600 "${ZIEL}/wallpaper" "${ZIEL}/wallpaper_info.xml"
 adb shell chmod 700 "${ZIEL}/wallpaper_orig"
 # Without the wallpaper_file context the service cannot read the picture and
-# falls back to the stock one, silently and with nothing in the log.
+# silently falls back to the stock one.
 adb shell restorecon "${ZIEL}/wallpaper" "${ZIEL}/wallpaper_orig" \
                      "${ZIEL}/wallpaper_info.xml" >/dev/null 2>&1
 
-# Three keys, and each one fixes a different half-measure.
-#
-# themed_icon alone makes the icons ONE colour, not white: the colour is
-# derived from the wallpaper, and on this picture it first landed on pink.
-#
-# MONOCHROMATIC drops the saturation but not the hue, because the seed is still
-# the wallpaper. The result was a cool blue-grey, which is not what anybody
-# means by white.
-#
-# color_source=preset with a white system_palette takes the wallpaper out of it
-# altogether, and only then are the icons actually neutral.
+# themed_icon alone tints the icons with a colour derived from the wallpaper,
+# and MONOCHROMATIC still keeps that hue. Only color_source=preset with a white
+# system_palette makes them neutral.
 JSON='{"_applied_timestamp":2,"android.theme.customization.color_source":"preset","android.theme.customization.system_palette":"FFFFFF","android.theme.customization.accent_color":"FFFFFF","android.theme.customization.theme_style":"MONOCHROMATIC","android.theme.customization.color_both":"1","android.theme.customization.themed_icon":"1"}'
 adb shell "settings put secure theme_customization_overlay_packages '${JSON}'"
 
-# The launcher puts a predicted app on the home screen, above the dock, and on
-# a fresh device that is Google Photos. It is not a row in the launcher
-# database, so deleting it there does nothing: it is drawn from the prediction
-# service and comes straight back. Switching that service off is what removes
-# it, and on a rig whose job is to run somebody's app under test, on-device
-# suggestions are noise rather than a feature.
+# The predicted app above the dock comes from the prediction service, not the
+# launcher database, so disabling the service is the only way to remove it.
 adb shell pm disable-user --user 0 com.google.android.as >/dev/null 2>&1 || true
 
-# Dark mode, and it is not a matter of taste here. A fresh AVD starts in light
-# mode, and themed icons in light mode are dark glyphs on pale circles: still
-# themed, but the opposite of what the wallpaper was drawn for.
+# In light mode themed icons are dark glyphs on pale circles, the opposite of
+# what the wallpaper was drawn for.
 adb shell cmd uimode night yes >/dev/null 2>&1 || true
 
-# The launcher keeps its preferences and its layout in memory and writes both
-# out when it stops, so it has to be stopped before either is touched.
+# The launcher keeps its preferences and layout in memory and writes both out
+# when it stops, so it is stopped before either is touched.
 PREFS=/data/data/com.google.android.apps.nexuslauncher/shared_prefs/com.android.launcher3.prefs.xml
 DB=/data/data/com.google.android.apps.nexuslauncher/databases/launcher_4_by_5.db
 adb shell am force-stop com.google.android.apps.nexuslauncher >/dev/null 2>&1
 sleep 2
 adb shell "grep -q themed_icons ${PREFS} 2>/dev/null || sed -i 's#</map>#    <boolean name=\"themed_icons\" value=\"true\" />\n</map>#' ${PREFS}" >/dev/null 2>&1
 
-# Clear the home screen. A fresh device puts Gmail, Photos and YouTube on it,
-# none of which this rig is for, and they are real rows rather than
-# suggestions: container -100 is the workspace, -101 the dock, and the dock
-# keeps what it has. The wallpaper carries the mark, and nothing should sit on
-# top of it that nobody asked for.
+# Clears Gmail, Photos and YouTube from the home screen. Container -100 is the
+# workspace and -101 the dock, which keeps its apps.
 adb shell "sqlite3 ${DB} 'delete from favorites where container = -100;'" >/dev/null 2>&1 || true
 
-# ---------------------------------------------------------------------------
-# The launcher, and the icons in it
-# ---------------------------------------------------------------------------
-# Everything above makes the Pixel Launcher as good as it gets, and it stops
-# two steps short: its search bar has no switch, and its themed icons reach the
-# home screen and the dock but not the app drawer. Lawnchair does both, and it
-# reads icon packs, which is a launcher feature rather than an Android one.
-#
-# The settings are RESTORED rather than set. Lawnchair keeps them in a
-# DataStore and a launcher database, with no command-line way in, so they were
-# made once by hand and the four files kept - the same approach as the
-# wallpaper, and for the same reason.
+# Lawnchair keeps its settings in a DataStore and a launcher database with no
+# command-line way in, so, as with the wallpaper, they were made once by hand
+# and the four files are restored.
 if [[ -f "${APK}/lawnchair.apk" ]]; then
     echo "[svc-branding] Launcher und Symbole"
     adb install -r -g "${APK}/lawnchair.apk" >/dev/null 2>&1
     adb install -r "${APK}/arcticons.apk" >/dev/null 2>&1
 
     if adb shell pm list packages 2>/dev/null | grep -q "app.lawnchair"; then
-        # STARTED ONCE BEFORE ANYTHING IS RESTORED. A freshly installed app has
-        # no databases directory at all: it is created the first time the app
-        # writes. Copying into it beforehand fails on every file, and the first
-        # attempt did exactly that while still reporting success.
-        #
-        # Letting the app create the directory itself also gets the ownership
-        # and the SELinux context right without this script having to know what
-        # they should be.
-        #
-        # STARTED BY ITS ACTIVITY, not with the HOME key. HOME starts whichever
-        # launcher is currently the default, and at this point that is still the
-        # stock one - so Lawnchair never ran, never created its directory, and
-        # all four copies failed. That cost three runs before the log said
-        # "0 von 4" out loud.
+        # A fresh install has no databases directory until the app first
+        # writes, so Lawnchair is started once to create it with the right
+        # owner and SELinux context. It is started by its activity, because the
+        # HOME key would still open the stock launcher.
         adb shell am start -n app.lawnchair/app.lawnchair.LawnchairLauncher >/dev/null 2>&1
         for _ in $(seq 1 30); do
             adb shell "test -d /data/data/app.lawnchair/databases" >/dev/null 2>&1 && break
@@ -176,17 +124,10 @@ if [[ -f "${APK}/lawnchair.apk" ]]; then
 
         besitzer="$(adb shell stat -c '%U:%G' /data/data/app.lawnchair 2>/dev/null | tr -d '\r\n')"
 
-        # FOUR FILES IN THREE PLACES, and finding the right ones took a detour
-        # worth recording. The settings are NOT in databases/preferences, which
-        # is what the name suggests and what got restored first: they are in
-        # files/datastore/preferences.preferences_pb, all 264 bytes of it. The
-        # layout restored correctly from the database while every setting was
-        # quietly ignored, which looked like the restore failing when it was
-        # the wrong file succeeding.
-        #
-        # The SQLite side files are deliberately NOT shipped. A -wal and a -shm
-        # from one moment paired with a main file from another is a rollback
-        # waiting to happen; they are removed instead so SQLite rebuilds them.
+        # The settings live in files/datastore/preferences.preferences_pb, not
+        # in databases/preferences as the name suggests. The SQLite -wal and
+        # -shm files are removed rather than shipped, because side files out of
+        # step with the main file would roll it back.
         kopiert=0
         gesamt=0
         restore_one() {
@@ -212,9 +153,6 @@ if [[ -f "${APK}/lawnchair.apk" ]]; then
                         /data/data/app.lawnchair/databases/preferences-shm \
                         /data/data/app.lawnchair/databases/launcher_5_4_4.db-journal >/dev/null 2>&1
 
-        # Counted rather than assumed. An early version announced success while
-        # every single copy had failed, which is the one thing a setup step must
-        # never do.
         if [[ "${kopiert}" -ne "${gesamt}" ]]; then
             echo "[svc-branding] Lawnchair: nur ${kopiert} von ${gesamt} Einstellungsdateien kamen an"
         fi
@@ -223,48 +161,33 @@ if [[ -f "${APK}/lawnchair.apk" ]]; then
     fi
 fi
 
-# The framework reads all of this at startup, so it gets one. This costs about
-# forty seconds and happens exactly once in the life of an AVD.
+# The framework reads all of this at startup, so it is restarted once in the
+# life of an AVD, which takes about forty seconds.
 adb shell stop
 sleep 3
 adb shell start
 if warte_auf_start; then
-    # THE DEFAULT LAUNCHER IS SET LAST, and that is the whole reason this sits
-    # down here rather than beside the install. Set before the framework
-    # restart it does not survive it: the command reports Success, and after
-    # the restart the stock launcher is back. Two full runs were spent before
-    # the order became the suspect.
-    #
-    # The FULL class name as well: dumpsys prints the component as
-    # app.lawnchair/.LawnchairLauncher, and that leading dot is not expanded
-    # everywhere it is accepted.
-    # The package manager is asked in the loop rather than as a gate. Straight
-    # after a framework restart it answers nothing at all, and a `grep -q` on
-    # nothing is a silent false: the whole block was skipped and not one line
-    # went into the log to say so.
-    if true; then
-        # SET, THEN CHECKED, THEN SET AGAIN. boot_completed is not the same as
-        # a settled package manager: right after it, set-home-activity answers
-        # Success and the preference is gone moments later, while the same
-        # command by hand a minute afterwards sticks. So this asks until the
-        # answer holds rather than trusting the first Success.
-        heim=""
-        for _ in $(seq 1 12); do
-            adb shell cmd package set-home-activity \
-                app.lawnchair/app.lawnchair.LawnchairLauncher >/dev/null 2>&1
-            sleep 5
-            heim="$(adb shell cmd package resolve-activity -c android.intent.category.HOME \
-                        -a android.intent.action.MAIN 2>/dev/null | grep -m1 packageName | tr -d ' \r')"
-            [[ "${heim}" == *"app.lawnchair"* ]] && break
-        done
+    # The default launcher is set only after the framework restart, which would
+    # otherwise undo it. Right after boot_completed the package manager still
+    # answers Success and then drops the setting, so it is set and checked
+    # until it holds. The full class name is needed because the short form
+    # with a leading dot is not accepted everywhere.
+    heim=""
+    for _ in $(seq 1 12); do
+        adb shell cmd package set-home-activity \
+            app.lawnchair/app.lawnchair.LawnchairLauncher >/dev/null 2>&1
+        sleep 5
+        heim="$(adb shell cmd package resolve-activity -c android.intent.category.HOME \
+                    -a android.intent.action.MAIN 2>/dev/null | grep -m1 packageName | tr -d ' \r')"
+        [[ "${heim}" == *"app.lawnchair"* ]] && break
+    done
 
-        if [[ "${heim}" == *"app.lawnchair"* ]]; then
-            echo "[svc-branding] Lawnchair mit Arcticons ist der Startbildschirm"
-        else
-            echo "[svc-branding] Startbildschirm blieb ${heim:-unbekannt}, Lawnchair griff nicht"
-        fi
-        adb shell input keyevent KEYCODE_HOME >/dev/null 2>&1
+    if [[ "${heim}" == *"app.lawnchair"* ]]; then
+        echo "[svc-branding] Lawnchair mit Arcticons ist der Startbildschirm"
+    else
+        echo "[svc-branding] Startbildschirm blieb ${heim:-unbekannt}, Lawnchair griff nicht"
     fi
+    adb shell input keyevent KEYCODE_HOME >/dev/null 2>&1
 
     echo "[svc-branding] gesetzt"
     touch "${MARKE}"

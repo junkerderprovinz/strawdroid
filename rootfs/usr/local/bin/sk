@@ -1,17 +1,7 @@
 #!/usr/bin/env bash
-# -----------------------------------------------------------------------------
-# sk - the three things somebody does to this rig from a terminal
-# -----------------------------------------------------------------------------
-# It exists because all three are one adb invocation away and none of them is
-# the invocation somebody remembers. `sk install foo.apk` beats looking up
-# whether it was `adb install -r` or `-t` for the fourth time.
-#
-# The share is mounted READ-ONLY at /share (see the Unraid template), so an APK
-# dropped into the download folder from anywhere on the network can be installed
-# here without leaving the browser. Nothing in here can write to it: this rig
-# runs unfinished code, and unfinished code has no business writing to a share
-# full of everything else.
-# -----------------------------------------------------------------------------
+# sk: short forms of the adb calls this rig needs from a terminal. APKs come
+# from the share, mounted read-only at /share, so anything dropped into it from
+# the network can be installed without leaving the browser.
 set -euo pipefail
 
 SHARE="${SK_SHARE:-/share}"
@@ -20,7 +10,7 @@ usage() {
     cat <<'EOF'
 sk install <file.apk>     install an APK, replacing any earlier build of it
 sk list                   the APKs on the mounted share, newest first
-sk push <file|dir> [dest] copy files INTO the device's shared storage
+sk push <file|dir> [dest] copy files into the device's shared storage
 sk doze on|off            force the device into deep idle, or release it
 sk shell [...]            a shell on the device, or one command on it
 
@@ -53,10 +43,9 @@ install)
     apk="$(resolve "$1")"
     [ -f "${apk}" ] || { echo "No such file: ${apk}" >&2; exit 1; }
     require_device
-    # -r replaces an existing install and KEEPS its data, which is what makes a
-    # second build testable against the state the first one left behind. -d
-    # allows a downgrade, because during development the version code goes
-    # backwards more often than anybody admits.
+    # -r keeps the existing app's data, so a new build is tested against the
+    # state the last one left. -d allows a downgrade, since version codes go
+    # backwards during development.
     adb install -r -d "${apk}"
     ;;
 list)
@@ -64,9 +53,7 @@ list)
         echo "Nothing is mounted at ${SHARE}. Add the share to this container to use it." >&2
         exit 1
     fi
-    # Collected first and printed second, so "nothing there" can be SAID.
-    # Piping straight to cut prints nothing on an empty share and returns
-    # success, which reads as the command having failed silently.
+    # Collected first so an empty share gets a message instead of no output.
     found="$(find "${SHARE}" -maxdepth 2 -type f -iname '*.apk' \
         -printf '%T@ %TY-%Tm-%Td %TH:%TM  %10s  %p\n' 2>/dev/null | sort -rn | cut -d' ' -f2-)"
     if [ -z "${found}" ]; then
@@ -78,16 +65,12 @@ list)
 push)
     [ $# -ge 1 ] || { usage >&2; exit 2; }
     src="$(resolve "$1")"
-    # Downloads by default: it is the one folder the SAF picker shows without
-    # anybody having to grant a tree first, so files land where a test can
-    # actually reach them.
+    # The SAF picker shows Download without a tree grant.
     dest="${2:-/sdcard/Download/}"
     [ -e "${src}" ] || { echo "No such file or folder: ${src}" >&2; exit 1; }
     require_device
     adb push "${src}" "${dest}"
-    # The media scanner is what makes a pushed file VISIBLE to the picker.
-    # Without this the file is on the disk and absent from every chooser, which
-    # looks like the push having silently failed.
+    # Until the media scanner sees a file, the picker does not show it.
     adb shell am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE \
         -d "file://${dest}" >/dev/null 2>&1 || true
     echo "Pushed to ${dest}"
@@ -96,9 +79,8 @@ doze)
     require_device
     case "${1:-}" in
         on)
-            # Unplugging first is not optional: a device that believes it is
-            # charging refuses to go idle, and the force-idle then reports
-            # success while nothing happens.
+            # A charging device refuses to go idle while force-idle still
+            # reports success.
             adb shell dumpsys battery unplug >/dev/null
             adb shell dumpsys deviceidle force-idle
             ;;
