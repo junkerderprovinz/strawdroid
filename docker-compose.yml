@@ -10,17 +10,13 @@ services:
     image: ghcr.io/junkerderprovinz/strawdroid:latest
     container_name: StrawDroid
 
-    # KVM is not optional. Without it the emulator does not start, and the
-    # container log says so in as many words rather than leaving a black
-    # rectangle.
+    # Without KVM the emulator does not start, and the container log says so.
     devices:
       - /dev/kvm
 
-    # PUID and PGID decide who owns /config, and they have to match the user
-    # that owns the directory on the host. Get them wrong and the emulator
-    # cannot write into its own AVD; the container then reports
-    # "A snapshot operation is pending and timeout has expired", which reads
-    # like a corrupt device and is a permission bit.
+    # PUID and PGID must match the owner of ./config on the host, or the
+    # emulator cannot write into its AVD and reports "A snapshot operation is
+    # pending and timeout has expired".
     #
     # 99:100 is Unraid's nobody:users. On a plain Linux box, use your own:
     #   id -u  /  id -g
@@ -39,24 +35,22 @@ services:
       - "5555:5555"   # adb
 
     volumes:
-      # The AVD itself, plus installed apps and granted permissions. The only
-      # persistent mount by design: without it every restart is a factory
-      # reset.
+      # The AVD with its installed apps and granted permissions; without it
+      # every restart is a factory reset.
       - ./config:/config
-      # Optional, read-only. An APK dropped in here shows up ON THE DEVICE
+      # Optional, read-only. An APK dropped in here shows up on the device
       # under Download/share, so it can be installed by tapping it.
       # - /path/to/downloads:/share:ro
 
     shm_size: "2gb"
 
-    # An emulator is a virtual machine and holds its memory whether anybody is
-    # testing or not: measured idle, with no app installed, about 6 GB.
+    # The emulator holds about 6 GB even idle with no app installed.
     deploy:
       resources:
         limits:
           cpus: "4"
           memory: 8g
 
-    # Deliberately not "unless-stopped". Start it when it is needed, stop it
-    # after.
+    # Because of that memory it is started when needed rather than kept up
+    # with "unless-stopped".
     restart: "no"

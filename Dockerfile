@@ -1,36 +1,24 @@
 # syntax=docker/dockerfile:1.26
 #
-# StrawDroid - an Android phone you can hit as hard as you like
-# -----------------------------------------------------------------------------
-# A straw droid is a practice dummy shaped like an Android phone: built like the
-# real thing so somebody can strike at it without anybody getting hurt. That is
-# what this is.
-# It runs the REAL Android emulator - the same AVD Android Studio starts - with
-# its screen on a Selkies desktop, so an app under development can be installed,
-# driven and broken without an APK ever touching a phone.
+# StrawDroid: the real Android emulator, the same AVD Android Studio starts,
+# with its screen on a Selkies desktop, so an app under development can be
+# installed, driven and broken without an APK ever touching a phone.
 #
-# WHY NOT Android-in-a-container (ReDroid, Waydroid). Those run the Android
-# userspace directly on the host kernel: no battery, no motion sensor, no power
-# HAL. Doze therefore never fires, WorkManager runs more eagerly than it ever
-# would on real hardware, and Android 14's limits on a dataSync foreground
-# service never kick in. For an app whose whole job is syncing files in the
-# background, a rig that is green because it never asks the question is worse
-# than no rig at all. A real AVD answers, and `dumpsys deviceidle force-idle`
-# makes it answer on demand.
+# Android-in-a-container (ReDroid, Waydroid) runs the Android userspace on the
+# host kernel with no battery, motion sensor or power HAL. Doze never fires,
+# WorkManager runs more eagerly than on real hardware, and Android's limits on
+# dataSync foreground services never kick in, so a background sync app would
+# pass tests it should fail. A real AVD enforces them, and
+# `dumpsys deviceidle force-idle` triggers Doze on demand.
 #
-# WHY NOT budtmo/docker-android, which does the same job and is well kept. Its
-# screen is x11vnc plus noVNC: a framebuffer diff over websockets, no hardware
-# encoding. Judging how an app FEELS is judging its scrolling and its
-# transitions, which is exactly what noVNC smears. This one puts the emulator on
-# the same Selkies/WebRTC desktop as the rest of the house, hardware-encoded on
-# the box's own GPU.
+# budtmo/docker-android streams its screen through x11vnc and noVNC, which
+# smears scrolling and transitions. Here the emulator sits on the same
+# hardware-encoded Selkies/WebRTC desktop as the other house images.
 #
-# House pattern copied from junkerderprovinz/krusader and the Crucible sandbox:
-# LinuxServer Selkies base, s6-overlay init, HTTPS WebUI on 3001, no login by
-# default. GPU wiring is supplied at `docker run` via the Unraid template rather
-# than baked in, which keeps the image vendor-neutral.
-#
-# Flavour PINNED on purpose, never :latest and never the floating :dev tag.
+# It follows the krusader image: LinuxServer's Selkies base, s6-overlay init,
+# the HTTPS WebUI on 3001 and no login by default. GPU wiring is supplied at
+# `docker run` by the Unraid template, which keeps the image vendor-neutral.
+# The flavour is pinned rather than :latest or the floating :dev tag.
 ARG BASE_TAG=ubunturesolute
 FROM ghcr.io/linuxserver/baseimage-selkies:${BASE_TAG}
 
@@ -40,48 +28,40 @@ LABEL org.opencontainers.image.description="StrawDroid - a real Android emulator
 LABEL org.opencontainers.image.vendor="junkerderprovinz"
 LABEL org.opencontainers.image.source="https://github.com/junkerderprovinz/strawdroid"
 
-# TITLE feeds the PWA manifest; SELKIES_UI_TITLE is the visible tab and sidebar
-# title of the Selkies web client. Both must be set on this base.
+# TITLE feeds the PWA manifest and SELKIES_UI_TITLE the web client's tab and
+# sidebar; this base needs both.
 #
-# SELKIES_ENABLE_BASIC_AUTH=false: the Selkies server turns basic auth ON by
-# default with well-known credentials (ubuntu / mypasswd). Same house fix as
-# krusader and Crucible - no login unless CUSTOM_USER and PASSWORD are actually
-# set, which init-nologin enforces by stripping the empty values Unraid passes
-# for blank template fields.
+# The Selkies server enables basic auth by default, with well-known credentials
+# (ubuntu / mypasswd). With SELKIES_ENABLE_BASIC_AUTH=false there is no login
+# unless CUSTOM_USER and PASSWORD are set, and init-nologin strips the empty
+# values Unraid passes for blank template fields.
 ENV TITLE="StrawDroid" \
     SELKIES_UI_TITLE="StrawDroid" \
     SELKIES_ENABLE_BASIC_AUTH="false"
 
-# ---------------------------------------------------------------------------
-# Base tools. socat is not incidental: the emulator's adb binds to loopback
-# only, so without a forwarder nothing outside the container can reach it and
-# the entire point of the rig - deploying from Android Studio - is gone.
-# ---------------------------------------------------------------------------
+# The emulator's adb binds to loopback only, so socat forwards it; without it
+# Android Studio cannot reach the device.
 RUN set -eux; \
     apt-get update; \
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
         curl wget ca-certificates unzip xz-utils jq \
         socat \
-        # wmctrl moves the emulator window back onto the screen when Selkies
-        # resizes the desktop under it - see svc-window-keeper for why that
-        # is not a one-off placement.
+        # svc-window-keeper uses wmctrl to move the emulator window back on
+        # screen whenever Selkies resizes the desktop.
         wmctrl x11-utils \
-        # Fonts, or the emulator window and xterm render text as empty boxes
+        # Without fonts the emulator window and xterm render text as empty boxes.
         fontconfig fonts-noto fonts-noto-color-emoji fonts-dejavu-core \
         fonts-liberation2 \
-        # Desktop background setter, used by rootfs/defaults/autostart
+        # Sets the desktop background, see rootfs/defaults/autostart.
         feh \
-        # openbox-xdg-autostart logs a complaint on every boot without this
+        # openbox-xdg-autostart logs a complaint on every boot without it.
         python3-xdg \
         locales; \
     fc-cache -f >/dev/null 2>&1 || true; \
     apt-get clean; \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-# ---------------------------------------------------------------------------
-# A JDK, because sdkmanager is a Java program. Headless: nothing here opens a
-# Java window, and the full JDK drags in a desktop toolkit for nothing.
-# ---------------------------------------------------------------------------
+# sdkmanager is a Java program. The headless JDK spares the desktop toolkit.
 RUN set -eux; \
     apt-get update; \
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
@@ -89,32 +69,20 @@ RUN set -eux; \
     apt-get clean; \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-# ---------------------------------------------------------------------------
-# The Android SDK.
+# API 36 is Android 16, the newest and also the strictest level: 14 added the
+# six-hour daily cap on dataSync foreground services, 15 a timeout on top, and
+# 16 keeps both. The Play Store requires a recent target level for new apps
+# anyway.
 #
-# ANDROID_API 36 is Android 16, and it is the NEWEST on purpose.
+# Only one level is installed. An AVD in the persistent volume points at its
+# system image by path, so raising this number strands an existing device;
+# init-strawdroid detects that and moves it aside.
 #
-# This started at 34, reasoning that Android 14 is where the six-hour daily cap
-# on dataSync foreground services landed and a sync app has to survive exactly
-# that. That was too cautious, and jdp said so. 15 keeps the cap AND adds a
-# timeout on top, 16 keeps both, so the newest level is the STRICTEST rather
-# than a different one - and the Play Store requires a recent target level for
-# a new submission anyway. Testing against 14 would have been testing a rule
-# more lenient than the one the app ships under.
+# google_apis rather than plain AOSP, because it carries Play services and a
+# real DocumentsUI, the SAF picker an app asks for a folder with.
 #
-# Only ONE level is installed, and that has a consequence the boot script has to
-# handle: an AVD in the persistent volume points at a system image by path, so
-# raising this number leaves the existing device pointing at an image that is no
-# longer in the container. See init-strawdroid, which notices and says so.
-#
-# google_apis rather than the plain AOSP image, because it carries Play services
-# and a real DocumentsUI - the SAF file picker an app asks for a folder with. An
-# image without one cannot answer whether the picker flow works at all.
-#
-# The command-line tools zip is version-pinned and checksum-verified. Google
-# serves that URL forever and changes what is behind it, so an unpinned fetch is
-# a build that silently becomes a different build.
-# ---------------------------------------------------------------------------
+# The command-line tools zip is pinned and checksum-verified, because Google
+# changes what is behind a URL without changing the URL.
 ENV ANDROID_SDK_ROOT=/opt/android-sdk \
     ANDROID_HOME=/opt/android-sdk
 ARG CMDLINE_TOOLS_VERSION=13114758
@@ -133,8 +101,8 @@ RUN set -eux; \
     rm -rf "${zip}" /tmp/cmdline
 ENV PATH="${ANDROID_SDK_ROOT}/cmdline-tools/latest/bin:${ANDROID_SDK_ROOT}/platform-tools:${ANDROID_SDK_ROOT}/emulator:${PATH}"
 
-# The system image is the big one, roughly 3 GB, so it gets its own layer: a
-# change to anything below must not make it download again.
+# The system image is roughly 3 GB, so it gets its own layer that later changes
+# do not invalidate.
 RUN set -eux; \
     yes | sdkmanager --licenses >/dev/null; \
     sdkmanager --install \
@@ -142,48 +110,33 @@ RUN set -eux; \
         "emulator" \
         "platforms;android-${ANDROID_API}" \
         "system-images;android-${ANDROID_API};${ANDROID_TAG};${ANDROID_ABI}" >/dev/null; \
-    # Prove the pieces the rig depends on are actually there rather than
-    # trusting a silent installer: a missing emulator binary would otherwise
-    # only surface as a container that starts and shows an empty desktop.
+    # sdkmanager can fail silently, and a missing emulator binary would
+    # otherwise only show up as an empty desktop.
     test -x "${ANDROID_SDK_ROOT}/emulator/emulator"; \
     test -x "${ANDROID_SDK_ROOT}/platform-tools/adb"; \
     test -d "${ANDROID_SDK_ROOT}/system-images/android-${ANDROID_API}/${ANDROID_TAG}/${ANDROID_ABI}"; \
     rm -rf /root/.android/cache /tmp/*
 
-# Which image the AVD is built from at first boot, recorded here so the boot
-# script does not have to repeat the build arguments and drift from them.
+# init-strawdroid builds the AVD from this package, so it cannot drift from the
+# build arguments.
 ENV STRAWDROID_PACKAGE="system-images;android-${ANDROID_API};${ANDROID_TAG};${ANDROID_ABI}" \
     STRAWDROID_API="${ANDROID_API}"
 
-# The AVD lives in the persistent volume, not in the image. It holds installed
-# apps, granted permissions and anything a test wrote, and losing that on every
-# container recreate would mean re-granting the SAF folder permission each time,
-# which is one of the things being tested.
+# The AVD lives in the persistent volume. It holds installed apps and granted
+# permissions, among them the SAF folder permission under test, which a
+# container recreate would otherwise reset.
 ENV ANDROID_AVD_HOME=/config/.android/avd \
     ANDROID_SDK_HOME=/config \
     ANDROID_USER_HOME=/config/.android
 
-# ---------------------------------------------------------------------------
-# The launcher on the emulated device, and its icons
-# ---------------------------------------------------------------------------
-# WHY A DIFFERENT LAUNCHER AT ALL. The stock Pixel Launcher cannot do two
-# things this rig wants. Its search bar has no switch, and its themed icons
-# reach the home screen and the dock but not the app drawer, which keeps the
-# original colours. It also reads no icon packs: that is a launcher feature,
-# not an Android one, and Pixel Launcher never implemented it.
+# The Pixel Launcher cannot hide its search bar, leaves the app drawer out of
+# themed icons and reads no icon packs, so svc-branding installs Lawnchair with
+# Arcticons. Both APKs, about 90 MB, are fetched at build time with pinned
+# versions and digests. Lawnchair is Apache-2.0 and Arcticons GPL-3.0; both ship
+# unmodified as separate APKs and are credited in the README.
 #
-# FETCHED AT BUILD TIME, NOT COMMITTED. Together these are about ninety
-# megabytes, which has no business in a git repository. The versions are
-# pinned and both downloads are checked against a digest, so a build either
-# gets exactly what was tested or fails.
-#
-# Lawnchair is Apache-2.0, Arcticons is GPL-3.0. Both ship unmodified,
-# alongside the image rather than linked into it, and both are credited in the
-# README with a pointer to their source.
-# Lawnchair's asset name does not follow its tag - the tag is v15.0.0-beta3.0
-# and the file is Lawnchair.15.0.0.Beta.3.0.apk - so both are named here
-# instead of one being derived from the other. Deriving it would produce a URL
-# that looks right and 404s on the next version bump.
+# Lawnchair's file name does not follow its tag (v15.0.0-beta3.0 against
+# Lawnchair.15.0.0.Beta.3.0.apk), so both are given rather than one derived.
 ARG LAWNCHAIR_TAG=v15.0.0-beta3.0
 ARG LAWNCHAIR_FILE=Lawnchair.15.0.0.Beta.3.0.apk
 ARG LAWNCHAIR_SHA=d4200d0985169fd79ba1bd225d653f2a2fe7b50aa07cb0d05ca64c7623f86059
@@ -200,9 +153,6 @@ RUN set -eux; \
     echo "${ARCTICONS_SHA}  /defaults/apk/arcticons.apk" | sha256sum -c -; \
     ls -l /defaults/apk
 
-# ---------------------------------------------------------------------------
-# Skeleton configs and s6-overlay init scripts
-# ---------------------------------------------------------------------------
 COPY rootfs/ /
 
 # Suppress the base image's branding so the log ends on our own READY banner.
@@ -227,16 +177,12 @@ RUN chmod +x \
     /defaults/autostart \
     /defaults/startwm.sh
 
-# ---------------------------------------------------------------------------
-# Browser-tab favicon. Same single-path mechanism the other house images use:
 # init-nginx copies /usr/share/selkies/www/icon.png into favicon.ico on every
-# start. Fail loudly if the path moves, because a silently missing icon is the
-# kind of thing that gets noticed months later.
-# ---------------------------------------------------------------------------
+# start. The build fails if the base moves that path.
 COPY assets/icon.png /usr/local/share/strawdroid-icon.png
 RUN set -eux; \
     dst=/usr/share/selkies/www/icon.png; \
-    [ -f "$dst" ] || { echo "ERROR: $dst missing - the selkies base layout changed, update the branding override"; exit 1; }; \
+    [ -f "$dst" ] || { echo "ERROR: $dst missing, the selkies base layout changed; update the branding override"; exit 1; }; \
     cp /usr/local/share/strawdroid-icon.png "$dst"; \
     echo "strawdroid: branded selkies icon at $dst"
 
@@ -248,26 +194,21 @@ ENV KEYBOARD_LAYOUT=us \
     LANGUAGE=en_US:en \
     LC_ALL=en_US.UTF-8
 
-# How the emulator draws.
-#
-# swiftshader_indirect by default because it works everywhere, including a
-# container with no GPU wired in at all. `host` is faster and is what makes
-# scrolling read honestly, but it needs the nvidia runtime and /dev/dri; set it
-# from the template once the GPU is confirmed.
-# Where the read-only share lands. The `sk` helper looks here for an APK given
-# by bare name, so `sk install arrowloop.apk` finds it without a path.
+# The `sk` helper looks here for an APK given by bare name.
 ENV SK_SHARE=/share
 
+# swiftshader_indirect works everywhere, even with no GPU wired in. `host` is
+# faster and shows how an app really scrolls, but needs the nvidia runtime and
+# /dev/dri; set it from the template once the GPU is confirmed.
 ENV EMULATOR_GPU=swiftshader_indirect \
     EMULATOR_DEVICE=pixel_6 \
     EMULATOR_RAM=2048 \
     EMULATOR_EXTRA_ARGS=""
 
-# 6080 is deliberately NOT served here: the screen is Selkies on 3000/3001, and
-# ADB is 5555. Two ways to see one screen would be two things to explain.
+# No noVNC on 6080: the screen is Selkies on 3000/3001, and ADB is 5555.
 EXPOSE 5555
 
-# Healthy means the WebUI answers AND the emulator is actually up. A rig whose
-# desktop loads while the phone never booted looks fine and is useless.
+# Healthy needs the WebUI and a booted Android; a desktop without a phone is
+# useless here.
 HEALTHCHECK --interval=30s --timeout=15s --start-period=300s --retries=3 \
     CMD ["/bin/sh", "-c", "c=$(curl -ks -o /dev/null -w '%{http_code}' --max-time 5 https://127.0.0.1:${CUSTOM_HTTPS_PORT:-3001}/); [ \"$c\" != \"000\" ] || exit 1; [ \"$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\\r\\n')\" = \"1\" ] || exit 1"]
