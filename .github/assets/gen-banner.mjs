@@ -1,14 +1,11 @@
 /**
- * Banner fuer StrawDroid, hell und dunkel.
+ * Generates the light and dark StrawDroid banners, 1600x500, on the pattern of
+ * glimstone's gen-banner.mjs: the mark on the left, the name in Bree Serif and
+ * the claim in Lato. Text is turned into SVG paths with opentype.js so the
+ * banner looks the same everywhere without a font.
  *
- * Nach demselben Muster wie glimstones gen-banner.mjs: 1600 auf 500, Marke
- * links, Name in Bree Serif, Claim in Lato. Der Text wird ueber opentype.js in
- * SVG-Pfade gewandelt, damit das SVG ohne Schrift auskommt und ueberall gleich
- * aussieht. Ein Banner, das erst beim Betrachter eine Schrift sucht, sieht bei
- * jedem anders aus.
- *
- * Deps (global): opentype.js, @resvg/resvg-js. Die Schriften werden einmal in
- * das Temp-Verzeichnis geladen.
+ * Deps (global): opentype.js, @resvg/resvg-js. The fonts are downloaded once to
+ * the temp dir.
  *
  *   node .github/assets/gen-banner.mjs
  */
@@ -35,36 +32,32 @@ const W = 1600, H = 500;
 const LH = 420, LW = 420;
 const nameSize = 132, claimSize = 44, gap = 70, lineGap = 8;
 
-// Die Marke ist fuer hellen Grund gezeichnet, und auf dem dunklen Banner kostet
-// das die Haelfte der Zeichnung: die beiden Aehren ueber dem Helm stehen frei
-// und sind reines #1d1d1b, also unsichtbar, und die Kontur ringsum liest sich
-// nicht als Linie, sondern als Luecke zwischen Gold und Grund.
-//
-// `tinte` faerbt die dunkle Tinte deshalb nur in der dunklen Fassung um, auf
-// denselben Wert wie das Hintergrundbild des Emulators, damit Banner und Geraet
-// dieselbe Figur zeigen. `auge` bleibt dunkel: cremefarbene Augen auf Gold sind
-// keine Augen mehr.
-const TINTE_ALT = "#1d1d1b";
+// The mark is drawn for a light ground. On the dark banner the two free-standing
+// ears of straw above the helmet are pure #1d1d1b and vanish, and the outline
+// reads as a gap between gold and ground. So the dark theme recolours the ink
+// to the tone of the emulator wallpaper, while the eyes stay dark: cream eyes on
+// gold stop reading as eyes.
+const OLD_INK = "#1d1d1b";
 
 const THEMES = [
   { suffix: "", bg: "#ffffff", name: "#1f2328", claim: "#5a5d5e" },
   { suffix: "-dark", bg: "#0d1117", name: "#e6edf3", claim: "#9aa4ad",
-    tinte: "#615a49", auge: "#22201c" },
+    ink: "#615a49", eye: "#22201c" },
 ];
 
-async function laden(datei, url) {
-  const p = join(tmpdir(), datei);
+async function loadFont(file, url) {
+  const p = join(tmpdir(), file);
   if (!existsSync(p)) {
     const r = await fetch(url);
-    if (!r.ok) throw new Error(`font fetch ${r.status} fuer ${datei}`);
+    if (!r.ok) throw new Error(`font fetch ${r.status} for ${file}`);
     writeFileSync(p, Buffer.from(await r.arrayBuffer()));
   }
   return opentype.parse(readFileSync(p));
 }
 
-const font = await laden("Haus-BreeSerif-Regular.ttf",
+const font = await loadFont("Haus-BreeSerif-Regular.ttf",
   "https://github.com/google/fonts/raw/main/ofl/breeserif/BreeSerif-Regular.ttf");
-const claimFont = await laden("Haus-Lato-Regular.ttf",
+const claimFont = await loadFont("Haus-Lato-Regular.ttf",
   "https://github.com/google/fonts/raw/main/ofl/lato/Lato-Regular.ttf");
 
 const startX = 165;
@@ -96,19 +89,17 @@ function textGroups(fnt, text, fontSize, x0, y0) {
   return parts.join("");
 }
 
-function embedMark(x, y, w, h, tinte, auge) {
+function embedMark(x, y, w, h, ink, eye) {
   let raw = readFileSync(MARK, "utf8").replace(/<\?xml[^>]*\?>\s*/, "");
-  if (tinte) {
-    // Die beiden klassenlosen Pfade zuerst: sie tragen KEIN fill-Attribut, sind
-    // also per SVG-Vorgabe schwarz, und ein Ersetzen der Farbwerte allein
-    // laesst sie unberuehrt. Es sind Koerperkontur und Strohlinien, zusammen
-    // der groesste Schwarzanteil der Zeichnung.
-    raw = raw.split("<path d=").join(`<path fill="${tinte}" d=`);
-    raw = raw.split(TINTE_ALT).join(tinte);
-    // Die Augen per style, nicht per fill: ein fill-Attribut ist eine
-    // Praesentationsangabe und steht in der SVG-Kaskade UNTER einer Regel aus
-    // dem <style>-Block, also wuerde .cls-3 es ueberstimmen.
-    raw = raw.split('<circle class="cls-3"').join(`<circle class="cls-3" style="fill:${auge}"`);
+  if (ink) {
+    // The two paths without a class, the body outline and the straw lines,
+    // carry no fill attribute and default to black, so replacing colour values
+    // alone would miss them.
+    raw = raw.split("<path d=").join(`<path fill="${ink}" d=`);
+    raw = raw.split(OLD_INK).join(ink);
+    // A style rather than a fill attribute, because the .cls-3 rule in the
+    // <style> block outranks a presentation attribute.
+    raw = raw.split('<circle class="cls-3"').join(`<circle class="cls-3" style="fill:${eye}"`);
   }
   const vb = (raw.match(/viewBox="([^"]+)"/) || [, "0 0 1000 1000"])[1];
   return raw.replace(
@@ -120,21 +111,20 @@ function embedMark(x, y, w, h, tinte, auge) {
 for (const t of THEMES) {
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
   <rect width="${W}" height="${H}" fill="${t.bg}"/>
-  ${embedMark(LX, LY, LW, LH, t.tinte, t.auge)}
+  ${embedMark(LX, LY, LW, LH, t.ink, t.eye)}
   <g fill="${t.name}">${textGroups(font, NAME, nameSize, textX, nameBaseline)}</g>
   <g fill="${t.claim}">${textGroups(claimFont, CLAIM, claimSize, textX, claimBaseline)}</g>
 </svg>
 `;
-  const basis = `${SLUG}-banner${t.suffix}`;
-  writeFileSync(join(__dir, `${basis}.svg`), svg);
-  writeFileSync(join(__dir, `${basis}.png`),
+  const base = `${SLUG}-banner${t.suffix}`;
+  writeFileSync(join(__dir, `${base}.svg`), svg);
+  writeFileSync(join(__dir, `${base}.png`),
     new Resvg(svg, { background: t.bg, fitTo: { mode: "width", value: W } }).render().asPng());
-  console.log(`wrote ${basis}.svg + .png`);
+  console.log(`wrote ${base}.svg + .png`);
 }
 
-// The support thread's banner: the mark alone, centred on white, no text at
-// all. It is generated in the same run rather than kept around from an earlier
-// one, so it cannot drift away from the mark the other two show.
+// The support thread's banner is the mark alone, centred on white. It is
+// generated in the same run so it cannot drift from the other two.
 {
   const h = 420;
   const w = h * (339.95 / 458.74);
@@ -143,9 +133,9 @@ for (const t of THEMES) {
   ${embedMark((W - w) / 2, (H - h) / 2, w, h)}
 </svg>
 `;
-  const basis = `${SLUG}-banner-logo`;
-  writeFileSync(join(__dir, `${basis}.svg`), svg);
-  writeFileSync(join(__dir, `${basis}.png`),
+  const base = `${SLUG}-banner-logo`;
+  writeFileSync(join(__dir, `${base}.svg`), svg);
+  writeFileSync(join(__dir, `${base}.png`),
     new Resvg(svg, { background: "#ffffff", fitTo: { mode: "width", value: W } }).render().asPng());
-  console.log(`wrote ${basis}.svg + .png`);
+  console.log(`wrote ${base}.svg + .png`);
 }
