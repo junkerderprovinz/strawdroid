@@ -3,14 +3,9 @@
 #
 #   chmod +x start-linux.sh && ./start-linux.sh
 #
-# The compose file does the same thing and is the better choice if you already
-# keep a stack. This is for the other case: one command, no file to place, and
-# a check of the one thing that actually decides whether this works.
-#
-# THAT ONE THING IS /dev/kvm. Without it the container starts, the desktop
-# serves, and the phone never boots, which reads as a broken image rather than
-# as a machine that cannot nest virtual machines. So it is checked before
-# anything is downloaded, and named when it is missing.
+# The compose file does the same for anyone who keeps a stack. This one needs
+# no file and checks /dev/kvm before downloading anything: without it the
+# desktop serves and the phone never boots, which looks like a broken image.
 set -euo pipefail
 
 IMAGE="ghcr.io/junkerderprovinz/strawdroid:latest"
@@ -53,9 +48,8 @@ fi
 ok "/dev/kvm is there"
 
 step "User"
-# PUID and PGID decide who owns /config. Get them wrong and the emulator cannot
-# write into its own AVD; it then reports "A snapshot operation is pending",
-# which reads like a corrupt device and is a permission bit.
+# With the wrong owner on /config the emulator cannot write into its AVD and
+# reports "A snapshot operation is pending".
 PUID="$(id -u)"
 PGID="$(id -g)"
 say "PUID=${PUID} PGID=${PGID}"

@@ -1,42 +1,21 @@
 """Generate the README's download buttons from one template.
 
-From a template, because hand-drawn buttons are chances to type one number
-differently, and the point of a row of them is that they look like one control
-repeated.
+One template, so the buttons of a row cannot drift apart. The geometry is
+ArrowLoop's: 245.3 tall with rx 38.2, the Buy Me a Coffee button's height and
+corner, and 720 wide rather than its 841.9, which would leave a third of the
+face empty next to the longest word. Each button is filled in the colour people
+already associate with its target, with no outline.
 
-THE GEOMETRY is ArrowLoop's, so the buttons here and there are the same object:
-245.3 tall with rx 38.2, which is the Buy Me a Coffee button's own height and
-corner, and 720 wide rather than that button's 841.9 because at 841.9 a third
-of the face sits empty next to the longest word.
+A browser cannot download an image, so the first button downloads the
+docker-compose.yml attached to every release: a release asset is served as an
+attachment, where a raw file in the repo would open as text. The last button
+is the source archive GitHub attaches to every release, and says so.
 
-THE COLOUR is the thing's own and there is no outline (jdp: "die butotns sollen
-keine rahmenliniehaben und farbig sein"). A filled shape in a colour somebody
-already associates with the thing does the work an outline was doing, faster:
-the eye finds "the blue one" before it reads the word.
-
-WHAT A CONTAINER REPO ACTUALLY OFFERS is not a bundle, it is an image, and a
-browser cannot download one of those: a click on it can only open a page. So
-the first button downloads the `docker-compose.yml` instead, which IS a file
-and is the thing somebody needs in order to run the image. It is attached to
-every release, because a release asset is served with Content-Disposition
-attachment and therefore actually downloads, where a raw file in the repo would
-open as text in a tab.
-
-The second button is the source archive, and it is labelled as exactly that.
-GitHub attaches "Source code (zip)" to every release automatically: it is the
-whole repository at that tag, not the Dockerfile alone. Calling it anything
-else on the button would send somebody looking for an image to a folder of
-YAML.
-
-THE GLYPHS are Font Awesome Free (icons CC BY 4.0), from the brands set and
-the solid one. The brand marks are trademarks of their owners and are used the
-one way a trademark may be used without permission: to name the thing they
-point at. Each button links to that thing, the marks are unmodified, and
-nothing here claims endorsement by anyone.
-
-The source button carries a ZIP glyph rather than the GitHub mark, because
-what it hands over is an archive, not a visit to GitHub. The mark named the
-host; the glyph names the file.
+The glyphs are Font Awesome Free (icons CC BY 4.0), from the brands and solid
+sets. The brand marks are trademarks of their owners, used unmodified and only
+to name what each button links to, with no claim of endorsement. The source
+button carries a ZIP glyph because it hands over an archive, not a visit to
+GitHub.
 
 Run from anywhere:  python scripts/gen_download_buttons.py
 Writes .github/assets/download-buttons/*.svg, which are committed, and the
@@ -88,16 +67,9 @@ TEMPLATE = """<?xml version="1.0" encoding="UTF-8"?>
     /* linear, not eased: an eased pass hands off at the wrong moment and the
        row stops reading as one band crossing both buttons.
 
-       `backwards` is not decoration, it is the second half of the delay. An
-       animation that has not started yet leaves its element wherever the
-       document put it, which for this band is x=0 - INSIDE the button, against
-       its left edge. So the stagger that makes the row read as one band was
-       also parking a motionless band on every button but the first, for as long
-       as that button's delay, every single time the page loaded. It came right
-       on its own from the second cycle onwards, which is why it survived: it is
-       only ever wrong while somebody is looking at the row for the first time.
-       `backwards` holds the 0% state during the delay instead, and 0% is off
-       the left edge. */
+       `backwards` holds the 0% state, off the left edge, during the delay.
+       Without it a band that has not started sits still at x=0, inside the
+       button, for as long as that button's delay. */
     .band {{ animation: pass {cycle}s linear {delay}s infinite backwards; }}
     @media (prefers-reduced-motion: reduce) {{
       .band {{ animation: none; opacity: 0; }}
@@ -121,30 +93,14 @@ TEMPLATE = """<?xml version="1.0" encoding="UTF-8"?>
 </svg>
 """
 
-# THE SHEEN IS DEFINED ON SCREEN, NOT ON THIS CANVAS, and that sentence is the
-# whole of this block.
+# The sheen is a tilted white band crossing the row once every seven seconds.
+# Its numbers are in screen pixels, the same for every row in the house, because
+# the canvases (720 here, 841.9 for the donation buttons) and the widths they
+# render at (195, 160) differ; everything else is derived from this row's width.
 #
-# A tilted white band, clipped to the button, crossing once every seven seconds:
-# the donation row's own, and the point is that it is the SAME band there and
-# here. It was not. Both rows described their band in their own canvas units,
-# and the two canvases differ (720 here, 841.9 there) as do the widths the
-# READMEs render them at (195 here, 160 there), so what reached the page was a
-# 38px band at 304px per second above a 31px band at 249. Two effects on one
-# page, which is what got reported.
-#
-# So the three numbers below are in SCREEN pixels and are the same for every row
-# in the house (see the GitHub style guide, "Der Schein"). Everything else is
-# derived from the width this row is rendered at.
-#
-# THE GAP IS MEASURED, not assumed. The row is `<img width="195">` with a
-# newline, two spaces and a `&nbsp;` between the images, which HTML collapses to
-# space-nbsp-space: 13.16px at GitHub's 16px body text, measured in a browser.
-# It used to be taken as 4px, which left the band hanging in the gap 17% too
-# long here - the visible half of the defect.
-#
-# The separator matters and is part of the rule: `&nbsp;` glued to the closing
-# `</a>` instead of standing on its own line measures 8.77px, and a row written
-# that way needs its own number.
+# GAP_PX is measured in a browser: images separated by a newline, two spaces and
+# a `&nbsp;` collapse to space-nbsp-space, 13.16px at GitHub's 16px body text. A
+# `&nbsp;` glued to the closing `</a>` measures 8.77px and would need its own number.
 BAND_PX = 33.0     # the band's width on screen
 SPEED = 250.0      # screen pixels per second
 GAP_PX = 13.16     # measured, see above
@@ -169,38 +125,23 @@ PASS = (SHEEN_TO - SHEEN_FROM) / SCALE / SPEED
 STEP = (RENDER_PX + GAP_PX) / SPEED
 PASS_PCT = PASS / CYCLE * 100.0
 
-# slug, brand file, background, ink, heading, second line, accessible name
+# slug, brand file, background, ink, heading, second line, accessible name, link
 #
-# GitHub's own colour is black, and a black button without an outline vanishes
-# into GitHub's dark theme, exactly as a black macOS button did in ArrowLoop's
-# row. The slate below stays visible on both themes.
+# A black button without an outline vanishes into GitHub's dark theme, so the
+# source button is slate rather than GitHub's own black.
 #
-# WINDOWS AND LINUX are start scripts, not builds, and the second line says so.
-# There is one image and it runs on both; what differs is the twenty lines of
-# checking in front of it. On Windows that check is the whole point: the
-# emulator needs /dev/kvm, which inside WSL2 exists only with
-# nestedVirtualization=true in a file nothing prompts you to create.
+# Windows and Linux get start scripts, not builds: the image is the same, and
+# the scripts check what it needs first, on Windows the nestedVirtualization
+# setting WSL2 needs for /dev/kvm. Linux yellow is Tux's #fcc624, so its ink is
+# dark, since white on it fails every contrast check.
 #
-# Linux yellow is Tux's own #fcc624 and is the one bright face in the row, so
-# its ink is dark rather than white. White on that yellow fails every contrast
-# check and looks washed out next to the other three.
-#
-#
-# The delay is the button's POSITION times STEP, computed below rather than
-# written out here: a hand-kept column of seconds is a column somebody edits the
-# row without touching, and then the band hands off into nothing.
-#
-# THIS ROW STARTS AT ZERO because it is the FIRST row on the page. One band
-# works its way down the README rather than one band per row running beside the
-# others: the whole first row, then the whole second. The give row below carries
-# the other half of that schedule - a fixed 3.8s offset, which is when the
-# longest download row in the house (ArrowLoop's four buttons) has finished. It
-# has to be a fixed number rather than a derived one, because those three
-# buttons are one shared asset referenced by twenty-six repositories and cannot
-# know what a given README puts above them.
-#
-# The last column is where the button leads. It lives here with the rest of the
-# button because this file writes the README row too, see write_readme().
+# Each delay is the button's position times STEP, computed in main() so that
+# editing the row cannot leave the band handing off into nothing. This row
+# starts at zero because it is the first on the page: one band works its way
+# down the README, and the donation row takes over at a fixed 3.8s, when the
+# longest download row in the house (ArrowLoop's four buttons) has finished.
+# That offset is fixed because the donation buttons are one asset shared by
+# every repository and cannot know what sits above them.
 BUTTONS = [
     ("docker-image", "docker", "#1d63ed", "#ffffff",
      "Docker", "compose file", "Download the docker-compose file",
@@ -216,27 +157,21 @@ BUTTONS = [
      "https://github.com/junkerderprovinz/strawdroid/archive/refs/heads/main.zip"),
 ]
 
-# THE README ROWS are written here as well, between markers, so a button added
-# to BUTTONS reaches the page by running this file and nothing else: the
-# download row, and every donation row (the one under the description and the one in
-# Support).
+# The README rows are written here too, between markers, so a button added to
+# BUTTONS reaches the page by running this file alone: the download row and
+# every donation row.
 #
-# ALL OF THEM SHOW ONE FILE, buttons.svg, each button through its own
-# #svgView fragment inside its own link. The shine is a CSS animation, and a
-# browser runs it on a clock that starts when that <img> gets its file. Separate
-# files arrive at separate moments, so the band jumped between buttons; and
-# Firefox reuses an image it already has when GitHub swaps the page without a
-# reload, starting a new clock on it. One file arrives once for every button on
-# the page and all of its <img> are inserted together, so all clocks start
-# together: the download row, then the donation row, in order. That is
-# also why the donation buttons are copied into this file rather than linked
-# from the profile repository's give.svg: two files would be two arrivals again.
-# Measured on github.com in Firefox, loaded fresh and after in-page navigation.
-# The layout of a sprite is explained in
-# junkerderprovinz/junkerderprovinz, donate/buttons/sprite.mjs.
+# All of them show one file, buttons.svg, each button through its own #svgView
+# fragment. The shine is a CSS animation whose clock starts when an <img> gets
+# its file, and Firefox also restarts it on an image it reuses after GitHub's
+# in-page navigation. Separate files would arrive at separate moments and the
+# band would jump between buttons; one file arrives once for every button, so
+# all clocks start together. That is also why the donation buttons are copied in
+# rather than linked from the profile repository's give.svg. The sprite layout
+# is explained in junkerderprovinz/junkerderprovinz, donate/buttons/sprite.mjs.
 #
-# The donation buttons are read from the profile repository when this runs, so
-# after they change there, run this again. The sprite is read from main, so a
+# The donation buttons are read from the profile repository at run time, so run
+# this again after they change there. The sprite is read from main, so a
 # branch's README preview shows main's buttons.
 REPO = "strawdroid"
 SPRITE = os.path.join(OUT, "buttons.svg")
@@ -396,7 +331,7 @@ def row(opener, items, nl):
 def write_readme(text, xs, gives):
     """Replace every marked row, each taking the line ending of its own marker.
 
-    width AND height are both set, because the image's own proportions are the
+    Width and height are both set, because the image's own proportions are the
     whole sprite's, not the button's.
     """
     downloads = [(href, alt, xs[i], W, H, RENDER_PX) for i, (_s, *_, alt, href) in enumerate(BUTTONS)]
@@ -416,12 +351,10 @@ def main():
     svgs = []
     for index, (slug, mark, bg, ink, head, sub, alt, _href) in enumerate(BUTTONS):
         path, bw, bh = brand(mark)
-        # Scale on the LONGER axis so glyphs of different proportions end up
-        # the same optical size. Docker's box is 640 by 512, the ZIP glyph's is
-        # 384 by 512; scaling on width alone would leave the narrow one huge.
+        # Scaling on the longer axis gives glyphs of different proportions the
+        # same optical size: Docker's box is 640 by 512, the ZIP glyph's 384 by
+        # 512, and scaling on width alone would leave the narrow one huge.
         scale = GLYPH / max(bw, bh)
-        # Re-centre horizontally: a wide mark scaled on its width sits left of
-        # a square one at the same x.
         gx = GX + (GLYPH - bw * scale) / 2
         gy = GY + (GLYPH - bh * scale) / 2
         svgs.append((slug, TEMPLATE.format(w=W, h=H, r=R, bg=bg, ink=ink, gx=gx, gy=gy,
@@ -438,10 +371,10 @@ def main():
     whole, xs = sprite([(svg, W, H) for _slug, svg in svgs] + gives)
     os.makedirs(OUT, exist_ok=True)
     for slug, svg in svgs:
-        ziel = os.path.join(OUT, slug + ".svg")
-        with open(ziel, "wb") as fh:
+        dest = os.path.join(OUT, slug + ".svg")
+        with open(dest, "wb") as fh:
             fh.write(svg.encode("utf-8"))
-        print(f"{slug}.svg  {os.path.getsize(ziel)} B")
+        print(f"{slug}.svg  {os.path.getsize(dest)} B")
     with open(SPRITE, "wb") as fh:
         fh.write(whole.encode("utf-8"))
     print(f"buttons.svg  {os.path.getsize(SPRITE)} B, {len(xs)} buttons")

@@ -3,16 +3,12 @@
 #   Right-click this file and choose "Run with PowerShell", or:
 #   powershell -ExecutionPolicy Bypass -File start-windows.ps1
 #
-# WHY THIS EXISTS AND THE COMPOSE FILE IS NOT ENOUGH. The emulator needs
-# /dev/kvm. On Windows the container runs inside the WSL2 virtual machine, so
-# KVM has to work INSIDE a VM, which means Hyper-V has to pass the processor's
-# virtualisation extensions through. That is off by default, and it is switched
-# on in one file nothing prompts you to create: %USERPROFILE%\.wslconfig.
-#
-# Without it the container starts, the desktop serves, and the phone never
-# boots. That reads as a broken image rather than as a missing setting, and the
-# line that would explain it is not written anywhere. So this checks first,
-# offers to write it, and only then downloads nine gigabytes.
+# The emulator needs /dev/kvm, and on Windows the container runs inside the
+# WSL2 virtual machine, so Hyper-V has to pass the virtualisation extensions
+# through. That is off until nestedVirtualization=true is set in
+# %USERPROFILE%\.wslconfig, and without it the phone never boots while the
+# desktop serves. This script checks the setting, offers to write it, and only
+# then downloads the image.
 
 $ErrorActionPreference = "Stop"
 
@@ -28,9 +24,8 @@ function Ok($t)   { Write-Host "  $t" -ForegroundColor Green }
 
 Step "Docker"
 if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
-    # Docker Desktop puts its binaries on PATH for new sessions only, so a
-    # shell that was already open does not see them. Worth handling: this
-    # script is most likely to be run right after the install.
+    # Docker Desktop puts its binaries on PATH for new sessions only, and this
+    # script often runs in the shell that just installed it.
     $fallback = "C:\Program Files\Docker\Docker\resources\bin"
     if (Test-Path "$fallback\docker.exe") {
         $env:PATH = "$fallback;$env:PATH"
@@ -72,21 +67,10 @@ if ($has) {
 }
 
 Step "KVM"
-# The device is checked, not the setting. A setting is a statement of intent;
-# /dev/kvm is the evidence.
-# TWO THINGS HAVE TO HAPPEN, and neither is done for us.
-#
-# First, the KVM module is not loaded when the WSL machine boots, so /dev/kvm
-# does not exist at all, nested virtualisation or not. modprobe registers the
-# misc device and the node appears.
-#
-# Second, the node then belongs to root with mode 600, while the emulator
-# inside the container runs as an ordinary user. Left alone, the container
-# starts, the desktop serves, and the emulator prints a page about groupadd
-# and udev rules that describes a Linux host and does not apply here.
-#
-# Both are repeated on every run on purpose: the WSL machine is rebuilt
-# whenever Docker Desktop restarts, and everything done inside it is gone.
+# The WSL machine boots without the KVM module, so modprobe makes /dev/kvm
+# appear, and the chmod opens the node, which is root's with mode 600, to the
+# emulator's ordinary user. Docker Desktop rebuilds the WSL machine on every
+# restart, so both steps run every time.
 & wsl.exe -d docker-desktop -e sh -c "modprobe kvm_intel 2>/dev/null || modprobe kvm_amd 2>/dev/null; chmod 666 /dev/kvm 2>/dev/null" | Out-Null
 $mode = (& wsl.exe -d docker-desktop -e sh -c "ls -l /dev/kvm 2>&1") -join ""
 if ($mode -match "crw-rw-rw-") {
