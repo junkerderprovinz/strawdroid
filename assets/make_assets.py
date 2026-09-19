@@ -2,19 +2,9 @@
 """Hintergrundbild fuer StrawDroids Selkies-Flaeche.
 
 Der Satz auf der Flaeche steht da, weil die halbe Minute vor dem ersten Bild
-sonst ein schwarzes Rechteck ist, und ein schwarzes Rechteck ist von einem
-kaputten Container nicht zu unterscheiden.
-
-**Englisch, nicht deutsch.** Bis 2026-09-13 stand hier deutscher Text mit
-Umlaut-Umschreibung ("Das Geraetefenster erscheint hier..."), sichtbar auf
-jedem Screenshot eines oeffentlichen Repos, dessen gesamte Doku englisch ist.
-Aufgefallen ist es erst, als der erste Screenshot fuer das README gemacht wurde.
-
-Das Icon erzeugt dieses Skript nicht mehr. Marke und Kachel kommen aus
-`strawdroid.svg` ueber `.github/assets/gen-banner.mjs` beziehungsweise die
-Icon-Ableitung daraus, damit Banner, Kachel und Flaeche dieselbe Zeichnung
-zeigen. Die frueheren Fassungen lasen `android.png`, eine Datei, die nie im
-Repo lag: das Skript lief damit bei niemandem ausser seinem Autor.
+sonst ein schwarzes Rechteck ist, das wie ein kaputter Container aussieht. Der
+Text ist englisch wie die Doku des Repos. Die Marke kommt aus `icon.png`, das
+wie Banner und Kachel aus `strawdroid.svg` abgeleitet ist.
 
     python assets/make_assets.py
 """
@@ -25,9 +15,8 @@ HIER = os.path.dirname(os.path.abspath(__file__))
 
 TAFEL = (22, 22, 22)          # Carbon-Grund, derselbe Ton wie xsetroot faellt zurueck
 
-# Absichtlich gross: Selkies zieht die Flaeche auf die Groesse des Browserfensters,
-# und ein hochskaliertes Bild wird weich. 2560 auf 1440 deckt jedes uebliche
-# Fenster ab, ohne dass die Datei ins Gewicht faellt.
+# Selkies zieht die Flaeche auf die Groesse des Browserfensters, und ein
+# hochskaliertes Bild wird weich. 2560 auf 1440 deckt jedes uebliche Fenster ab.
 BREITE, HOEHE = 2560, 1440
 
 
@@ -51,11 +40,8 @@ def hintergrund(breite=BREITE, hoehe=HOEHE):
 
     titel = schrift(52)
     zeile = schrift(28)
-    # Der Satz muss zu JEDEM Zeitpunkt stimmen. Die erste Fassung sagte
-    # "Android is starting" und blieb danach fuer immer stehen, also behauptete
-    # sie den Rest der Sitzung etwas Falsches, sichtbar neben einem laufenden
-    # Geraet. Ein Hinweis, der nur eine halbe Minute lang wahr ist, ist danach
-    # eine Fehlinformation an prominenter Stelle.
+    # Der Satz bleibt die ganze Sitzung stehen, also muss er auch neben einem
+    # laufenden Geraet noch stimmen.
     for text, font, farbe, y in (
         ("StrawDroid", titel, (200, 200, 200), hoehe // 2 + 40),
         ("The device window appears here once the emulator has booted.",

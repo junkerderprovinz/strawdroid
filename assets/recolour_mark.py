@@ -2,25 +2,19 @@
 """Dunkelfassung der StrawDroid-Marke: die Tinte hell, die Augen dunkel.
 
 Die Zeichnung ist fuer hellen Grund gebaut. Auf dem dunklen Grund des Emulators
-passiert zweierlei: die beiden Aehren oben stehen frei und sind reines
-#1d1d1b, also unsichtbar, und die Kontur ringsum liest sich nicht als Linie,
-sondern als Luecke zwischen Gold und Grund.
+sind die beiden frei stehenden Aehren oben reines #1d1d1b und unsichtbar, und
+die Kontur liest sich als Luecke zwischen Gold und Grund. Umgefaerbt wird
+deshalb die Tinte an allen drei Stellen, die sie traegt:
 
-Umgefaerbt wird deshalb die Tinte, nicht der Grund. Betroffen sind drei Stellen,
-und alle drei muessen mit, sonst bleibt die Haelfte schwarz:
+  * .cls-3 fill: Helmzeichnung, die beiden Aehren, die Augen
+  * .cls-1 stroke: die 7px-Kontur der Glieder
+  * die zwei <path> ohne class, Koerperkontur und Strohlinien, ohne
+    fill-Attribut und damit per SVG-Vorgabe schwarz
 
-  * .cls-3  fill  - Helmzeichnung, die beiden Aehren, die Augen
-  * .cls-1  stroke - die 7px-Kontur der Glieder
-  * die zwei <path> OHNE class - Koerperkontur und Strohlinien in einem Pfad,
-    ohne fill-Attribut, also per SVG-Vorgabe schwarz. Ein Ersetzen der
-    Farbwerte allein laesst diese beiden unberuehrt, und sie sind der groesste
-    Schwarzanteil des ganzen Bildes.
+Die Augen bleiben dunkel, weil cremefarbene Augen auf Gold blind wirken. Sie
+sind die einzigen <circle>-Elemente und lassen sich so getrennt ansprechen.
 
-Die Augen bleiben dunkel. Cremefarbene Augen auf Gold sind keine Augen mehr,
-die Figur wirkt blind. Sie sind die einzigen <circle>-Elemente, also sauber
-adressierbar, ohne den Rest der Klasse anzufassen.
-
-Nur Binaermodus, wie fuer jede Datei in einem Repo-Baum.
+Gelesen und geschrieben wird im Binaermodus, damit die Zeilenenden bleiben.
 """
 import os
 import re
@@ -33,18 +27,14 @@ def faerben(quelle, ziel, tinte, auge=TINTE_ALT):
     with open(quelle, "rb") as fh:
         svg = fh.read().decode("utf-8")
 
-    # Die klassenlosen Pfade zuerst: ein explizites fill davor, sonst greift
-    # die SVG-Vorgabe Schwarz und kein Ersetzen der Welt erreicht sie.
+    # Die klassenlosen Pfade brauchen ein explizites fill, sonst greift die
+    # SVG-Vorgabe Schwarz.
     svg = svg.replace("<path d=", f'<path fill="{tinte}" d=')
 
-    # Danach die benannte Tinte, fill wie stroke in einem Zug.
     svg = svg.replace(TINTE_ALT, tinte)
 
-    # Die Augen zurueck ins Dunkle, und zwar per style, nicht per fill. Ein
-    # fill-Attribut ist eine Praesentationsangabe und steht in der
-    # SVG-Kaskade UNTER einer Regel aus dem <style>-Block, also hat .cls-3 das
-    # Attribut ueberstimmt und die Augen blieben cremefarben. Inline style
-    # gewinnt.
+    # Per style statt per fill, weil die .cls-3-Regel im <style>-Block ein
+    # fill-Attribut ueberstimmt.
     svg = re.sub(r'(<circle class="cls-3")', rf'\1 style="fill:{auge}"', svg)
 
     with open(ziel, "wb") as fh:

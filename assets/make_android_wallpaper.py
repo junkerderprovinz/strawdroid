@@ -1,21 +1,19 @@
 # -*- coding: utf-8 -*-
 """Android-Hintergrundbild fuer StrawDroid.
 
-Die Marke allein auf einer Flaeche war das Problem: das dunkle Rechteck des
-Emulators sah damit aus wie ein dunkles Rechteck mit einem Aufkleber. Der Grund
-traegt hier deshalb selbst etwas, aber leise genug, dass App-Symbole darauf
-noch lesbar bleiben. Vier Schichten, von hinten nach vorn:
+Eine Marke allein auf leerer Flaeche wirkt wie ein Aufkleber, deshalb traegt
+der Grund selbst etwas, leise genug, dass App-Symbole darauf lesbar bleiben.
+Vier Schichten, von hinten nach vorn:
 
   1. ein warmer Verlauf, oben fast schwarz, unten eine Spur waermer
   2. ein Strohgeflecht als Diagonalraster, knapp ueber der Sichtbarkeitsgrenze
   3. ein weicher Fackelschein hinter der Figur
   4. ein Aehrenfeld am unteren Rand, in dem die Figur steht
 
-Gezeichnet wird auf dem doppelten Raster und am Ende heruntergerechnet. Duenne
-Linien und die Spitzen der Aehren werden sonst treppig, und eine treppige Aehre
-sieht aus wie ein Zeichenfehler, nicht wie Stroh.
+Gezeichnet wird auf dem doppelten Raster und am Ende heruntergerechnet, sonst
+werden duenne Linien und die Spitzen der Aehren treppig.
 
-    python wp.py <marke.png> <ziel.png>
+    python assets/make_android_wallpaper.py feld|wappen <marke.png> <ziel.png>
 """
 import math
 import os
@@ -57,8 +55,8 @@ def verlauf():
 
 def geflecht(bild):
     """Strohgeflecht: zwei Diagonalscharen, leicht ungleich, damit es gewebt
-    aussieht und nicht wie ein Karo. Die Deckkraft ist Absicht so niedrig: auf
-    einem Telefon liegt hier meist ein App-Symbol drueber."""
+    aussieht und nicht wie ein Karo. Die Deckkraft bleibt niedrig, weil auf
+    einem Telefon meist ein App-Symbol darueber liegt."""
     schicht = Image.new("RGBA", (B, H), (0, 0, 0, 0))
     z = ImageDraw.Draw(schicht)
     for schar, (dx, abstand, deckung, dicke) in enumerate(
@@ -99,13 +97,12 @@ def schein(bild, mx, my, radius):
 def halm(z, x, boden, hoehe, neigung, deckung):
     """Ein Halm: Stengel als Bogen, darauf paarweise Koerner, oben zwei Grannen.
 
-    Bewusst kein Stroh-Klischee aus geraden Strichen. Ein gerader Strich liest
-    sich als Gitter, erst die Kruemmung macht daraus ein Feld."""
+    Gerade Striche lesen sich als Gitter, erst die Kruemmung macht ein Feld."""
     farbe = HALM + (deckung,)
     spitze_x = x + neigung
     spitze_y = boden - hoehe
 
-    # Stengel, als Polygonzug aus einer quadratischen Bezierkurve.
+    # Stengel als Polygonzug aus einer quadratischen Bezierkurve.
     kx, ky = x + neigung * 0.35, boden - hoehe * 0.55
     punkte = []
     for i in range(15):
@@ -120,7 +117,7 @@ def halm(z, x, boden, hoehe, neigung, deckung):
     paare = max(4, int(aehre / 46))
     for i in range(paare):
         t = i / max(1, paare - 1)
-        # Entlang der Kurve, obere 30 Prozent.
+        # Entlang der Kurve, im oberen Viertel.
         s = 0.76 + 0.24 * t
         px = (1 - s) ** 2 * x + 2 * (1 - s) * s * kx + s * s * spitze_x
         py = (1 - s) ** 2 * boden + 2 * (1 - s) * s * ky + s * s * spitze_y
@@ -139,10 +136,9 @@ def halm(z, x, boden, hoehe, neigung, deckung):
         )
 
 
-# Die Hoehenbereiche der drei Reihen UEBERLAPPEN sich absichtlich. Getrennte
-# Bereiche gaben jeder Reihe eine eigene, fast waagerechte Oberkante, und drei
-# waagerechte Kanten uebereinander sehen aus wie ein Kamm. Erst der Ueberlapp
-# franst die Silhouette aus.
+# Die Hoehenbereiche der drei Reihen ueberlappen sich. Getrennte Bereiche geben
+# jeder Reihe eine fast waagerechte Oberkante, und drei solche Kanten
+# uebereinander sehen aus wie ein Kamm.
 #
 # anzahl, h_min, h_max, deckung, unschaerfe
 REIHEN = (
@@ -156,14 +152,11 @@ def feld(bild, boden, tiefe, reihen):
     """Das Aehrenfeld. Drei Reihen: hinten klein und blass, vorn hoch und
     deutlicher. Die Staffelung macht die Tiefe, nicht die Anzahl.
 
-    Die Reihen werden in zwei Aufrufen gezeichnet, hinten und vorn, damit die
-    Marke dazwischen liegen kann. Wird alles vor die Marke gelegt, verschwinden
-    ihre Beine; wird alles dahinter gelegt, schwebt sie ueber dem Feld statt
-    darin zu stehen.
-
-    Der Zufallsgeber wird bei jedem Aufruf gleich gesetzt und dann fuer die
-    uebersprungenen Reihen leergedreht, sonst bekaeme der zweite Aufruf andere
-    Halme als der erste und die Reihen passten nicht mehr zueinander."""
+    Hintere und vordere Reihen werden in zwei Aufrufen gezeichnet, damit die
+    Marke dazwischen im Feld steht, statt darueber zu schweben oder ihre Beine
+    zu verlieren. Der Zufallsgeber wird bei jedem Aufruf gleich gesetzt und fuer
+    die uebersprungenen Reihen leergedreht, damit beide Aufrufe dieselben Halme
+    ziehen."""
     schicht = Image.new("RGBA", (B, H), (0, 0, 0, 0))
     zufall = random.Random(20260913)     # fest, damit zwei Laeufe dasselbe Bild geben
     for nr, (anzahl, h_min, h_max, deckung, unschaerfe) in enumerate(REIHEN):
@@ -174,10 +167,8 @@ def feld(bild, boden, tiefe, reihen):
             hoehe = tiefe * zufall.uniform(h_min, h_max)
             neigung = zufall.uniform(-1, 1) * hoehe * 0.13
             deck = deckung + zufall.randint(-6, 6)
-            # JEDER Zufallswert wird vor dem Ueberspringen gezogen, auch der
-            # hier. Steht er im Argument des halm-Aufrufs, zieht der zweite
-            # Aufruf ihn nicht, die Folge verschiebt sich, und die vordere
-            # Reihe steht dann an anderen Stellen als im ersten Durchlauf.
+            # Auch dieser Wert wird vor dem Ueberspringen gezogen; im Argument
+            # des halm-Aufrufs verschoebe er die Folge fuer die vordere Reihe.
             fuss = boden + zufall.uniform(0, 40)
             if nr not in reihen:
                 continue                # gezogen, aber nicht gezeichnet
@@ -234,13 +225,11 @@ def ring(bild, mx, my, radius):
 
 
 def vignette(bild):
-    """Randabdunklung, und zwar nur der Rand.
+    """Randabdunklung, nur am Rand.
 
-    Die erste Fassung zeichnete einen kleinen Kreis und zog ihn auf das Bild:
-    das Ergebnis war ein schwarzes Oval mitten im Bild, das den Fackelschein
-    komplett verschluckt hat. Die Abdunklung muss ausserhalb eines Ovals
-    liegen, das GROESSER ist als das Bild, sonst ist sie kein Rand, sondern ein
-    Scheinwerfer. Deshalb 1.35: die Kurve setzt erst kurz vor der Kante ein."""
+    Die Abdunklung liegt ausserhalb eines Ovals, das um den Faktor 1.35
+    groesser ist als das Bild, damit sie erst kurz vor der Kante einsetzt und
+    den Fackelschein in der Mitte nicht verschluckt."""
     n = 192
     ueber = 1.35
     kl = Image.new("L", (n, n), 255)
@@ -271,11 +260,8 @@ def feldbild(marke_pfad):
 
     marke, breite, hoehe = marke_laden(marke_pfad, MARKE_ANTEIL)
 
-    # Das Feld waechst vom UNTEREN BILDRAND nach oben, nicht von den Fuessen der
-    # Figur. In der ersten Fassung stand seine Grundlinie knapp unter der Marke,
-    # also standen die Halme links und rechts NEBEN ihr wie Kratzer, und die
-    # untere Bildhaelfte blieb leer. Vom Rand aus gewachsen liegt es als
-    # Vordergrund vor der Figur, und das untere Drittel traegt etwas.
+    # Das Feld waechst vom unteren Bildrand nach oben, nicht von den Fuessen der
+    # Figur, so liegt es als Vordergrund vor ihr und fuellt das untere Drittel.
     fuss = mitte_y + hoehe // 2
     boden, tiefe = H + int(H * 0.02), H - fuss + int(H * 0.10)
 
@@ -298,10 +284,8 @@ def wappenbild(marke_pfad):
 
     mitte_y = int(H * 0.42)
     schein(bild, B // 2, mitte_y, int(B * 0.58))
-    # Die Strahlen beginnen INNERHALB des Rings und enden knapp vor der
-    # Bildkante. Die erste Fassung liess sie bei 0.52 der Bildbreite
-    # beginnen, also schon ausserhalb des linken und rechten Randes: sichtbar
-    # blieben nur die nach oben und unten, und die gingen im Verlauf unter.
+    # Die Strahlen beginnen innerhalb des Rings und enden knapp vor der
+    # Bildkante; weiter aussen begonnen, blieben links und rechts keine uebrig.
     strahlen(bild, B // 2, mitte_y, int(B * 0.20), int(B * 0.92))
 
     marke, breite, hoehe = marke_laden(marke_pfad, 0.50)
