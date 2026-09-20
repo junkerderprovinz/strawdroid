@@ -68,7 +68,7 @@ If it has earned a place on your server or computer, toss a coin to your knight:
 6. [Running it](#6-running-it)
 7. [Using it](#7-using-it)
 8. [What persists](#8-what-persists)
-9. [Two things worth knowing](#9-two-things-worth-knowing)
+9. [Two things to know](#9-two-things-to-know)
 10. [How AI is used here](#10-how-ai-is-used-here)
 11. [Support this project](#11-support-this-project)
 
@@ -216,7 +216,7 @@ The wallpaper and the monochrome icons are set the same way, once, on the first 
 
 <br>
 
-## 9. Two things worth knowing
+## 9. Two things to know
 
 **The ADB port is forwarded, not bound.** The emulator's own adb daemon listens on loopback and nothing else. A forwarder inside the container hands the outside port to it. Without that, the port looks open from a development machine and the handshake never completes, which reads as a network problem and is not one.
 
