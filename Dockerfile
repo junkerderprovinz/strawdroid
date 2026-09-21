@@ -1,4 +1,4 @@
-# syntax=docker/dockerfile:1.26
+# syntax=docker/dockerfile:1.27
 #
 # StrawDroid: the real Android emulator, the same AVD Android Studio starts,
 # with its screen on a Selkies desktop, so an app under development can be
