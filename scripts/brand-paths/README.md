@@ -8,6 +8,9 @@ is used here.
 - `docker.txt`, `windows.txt`, `linux.txt` come from the **brands** set.
 - `zip.txt` is `file-zipper` from the **solid** set. It is a picture of an
   archive, not anybody's mark, so nothing below applies to it.
+- `unraid.txt` is Unraid's mark from [Dashboard Icons](https://dashboardicons.com)
+  (`homarr-labs/dashboard-icons`, **Apache-2.0**, licence text in
+  `LICENSE-dashboard-icons.txt`), with the gradient left out.
 
 `<name>.box.txt` is the glyph's own viewBox, so the generator can pull glyphs
 of different proportions to one optical size. Each glyph is drawn in the
@@ -16,5 +19,5 @@ button's one ink.
 Each brand mark is a trademark of its owner and is used the one way a trademark
 may be used without permission: to name the thing it points at. Each button
 links to that thing, the marks are unmodified, and nothing here claims
-endorsement by or affiliation with Docker, Inc., Microsoft, or the Linux
-Foundation.
+endorsement by or affiliation with Docker, Inc., Microsoft, the Linux
+Foundation or Lime Technology.

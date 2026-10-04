@@ -9,6 +9,7 @@ REPO = "strawdroid"
 RELEASE = "https://github.com/junkerderprovinz/strawdroid/releases/latest/download/"
 
 BUTTONS = {
+    "unraid": "https://ca.unraid.net/apps/strawdroid-023jr4h1s1s5il",
     "windows-script": RELEASE + "start-windows.ps1",
     "linux-script": RELEASE + "start-linux.sh",
     "compose": RELEASE + "docker-compose.yml",
