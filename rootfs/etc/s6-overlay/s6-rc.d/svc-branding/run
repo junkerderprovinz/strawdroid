@@ -15,24 +15,24 @@
 # minutes for Android to boot, and a oneshot would hold up every service behind
 # it. The marker lives in /config beside the AVD, so a new AVD gets the branding
 # and a wallpaper somebody chose afterwards stays.
-QUELLE=/defaults/android
+SRC=/defaults/android
 APK=/defaults/apk
-MARKE=/config/.strawdroid-branding
-ZIEL=/data/system/users/0
+MARKER=/config/.strawdroid-branding
+DEST=/data/system/users/0
 
 # svc-strawdroid-ready holds its READY line until this file exists, so the
 # framework restart below does not happen right after it. Every exit path sets
 # it; otherwise the READY line would wait out its full timeout.
-fertig() {
+finish() {
     touch /run/strawdroid-branding-done
     exec sleep infinity
 }
 
-if [[ -f "${MARKE}" ]]; then
-    fertig
+if [[ -f "${MARKER}" ]]; then
+    finish
 fi
 
-warte_auf_start() {
+wait_for_boot() {
     for _ in $(seq 1 300); do
         if [[ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r\n')" == "1" ]]; then
             return 0
@@ -43,37 +43,37 @@ warte_auf_start() {
 }
 
 adb wait-for-device >/dev/null 2>&1
-if ! warte_auf_start; then
-    echo "[svc-branding] Android ist nicht hochgekommen, nichts geaendert"
-    fertig
+if ! wait_for_boot; then
+    echo "[svc-branding] Android did not come up, nothing changed"
+    finish
 fi
 
 # adb root fails on a production build, and without it every write below would
 # be denied.
-if ! adb root >/dev/null 2>&1 || ! warte_auf_start; then
-    echo "[svc-branding] adb root nicht moeglich, Hintergrundbild bleibt Standard"
-    fertig
+if ! adb root >/dev/null 2>&1 || ! wait_for_boot; then
+    echo "[svc-branding] adb root failed, the wallpaper stays the default"
+    finish
 fi
 
-echo "[svc-branding] Hintergrundbild und einfarbige Symbole werden gesetzt"
+echo "[svc-branding] setting the wallpaper and monochrome icons"
 
 # wallpaper and wallpaper_orig are the same bytes on the device.
 for f in wallpaper wallpaper_orig; do
-    adb push "${QUELLE}/wallpaper" "/data/local/tmp/${f}" >/dev/null 2>&1
-    adb shell cp "/data/local/tmp/${f}" "${ZIEL}/${f}"
+    adb push "${SRC}/wallpaper" "/data/local/tmp/${f}" >/dev/null 2>&1
+    adb shell cp "/data/local/tmp/${f}" "${DEST}/${f}"
     adb shell rm -f "/data/local/tmp/${f}"
 done
-adb push "${QUELLE}/wallpaper_info.xml" /data/local/tmp/wallpaper_info.xml >/dev/null 2>&1
-adb shell cp /data/local/tmp/wallpaper_info.xml "${ZIEL}/wallpaper_info.xml"
+adb push "${SRC}/wallpaper_info.xml" /data/local/tmp/wallpaper_info.xml >/dev/null 2>&1
+adb shell cp /data/local/tmp/wallpaper_info.xml "${DEST}/wallpaper_info.xml"
 adb shell rm -f /data/local/tmp/wallpaper_info.xml
 
-adb shell chown system:system "${ZIEL}/wallpaper" "${ZIEL}/wallpaper_orig" "${ZIEL}/wallpaper_info.xml"
-adb shell chmod 600 "${ZIEL}/wallpaper" "${ZIEL}/wallpaper_info.xml"
-adb shell chmod 700 "${ZIEL}/wallpaper_orig"
+adb shell chown system:system "${DEST}/wallpaper" "${DEST}/wallpaper_orig" "${DEST}/wallpaper_info.xml"
+adb shell chmod 600 "${DEST}/wallpaper" "${DEST}/wallpaper_info.xml"
+adb shell chmod 700 "${DEST}/wallpaper_orig"
 # Without the wallpaper_file context the service cannot read the picture and
 # silently falls back to the stock one.
-adb shell restorecon "${ZIEL}/wallpaper" "${ZIEL}/wallpaper_orig" \
-                     "${ZIEL}/wallpaper_info.xml" >/dev/null 2>&1
+adb shell restorecon "${DEST}/wallpaper" "${DEST}/wallpaper_orig" \
+                     "${DEST}/wallpaper_info.xml" >/dev/null 2>&1
 
 # themed_icon alone tints the icons with a colour derived from the wallpaper,
 # and MONOCHROMATIC still keeps that hue. Only color_source=preset with a white
@@ -105,7 +105,7 @@ adb shell "sqlite3 ${DB} 'delete from favorites where container = -100;'" >/dev/
 # command-line way in, so, as with the wallpaper, they were made once by hand
 # and the four files are restored.
 if [[ -f "${APK}/lawnchair.apk" ]]; then
-    echo "[svc-branding] Launcher und Symbole"
+    echo "[svc-branding] launcher and icons"
     adb install -r -g "${APK}/lawnchair.apk" >/dev/null 2>&1
     adb install -r "${APK}/arcticons.apk" >/dev/null 2>&1
 
@@ -122,25 +122,25 @@ if [[ -f "${APK}/lawnchair.apk" ]]; then
         adb shell am force-stop app.lawnchair >/dev/null 2>&1
         sleep 3
 
-        besitzer="$(adb shell stat -c '%U:%G' /data/data/app.lawnchair 2>/dev/null | tr -d '\r\n')"
+        owner="$(adb shell stat -c '%U:%G' /data/data/app.lawnchair 2>/dev/null | tr -d '\r\n')"
 
         # The settings live in files/datastore/preferences.preferences_pb, not
         # in databases/preferences as the name suggests. The SQLite -wal and
         # -shm files are removed rather than shipped, because side files out of
         # step with the main file would roll it back.
-        kopiert=0
-        gesamt=0
+        copied=0
+        total=0
         restore_one() {
-            local datei="$1" ziel="$2"
-            [[ -f "${QUELLE}/lawnchair/${datei}" ]] || return 0
-            gesamt=$((gesamt + 1))
-            adb push "${QUELLE}/lawnchair/${datei}" "/data/local/tmp/${datei}" >/dev/null 2>&1
-            if adb shell cp "/data/local/tmp/${datei}" "${ziel}/${datei}" >/dev/null 2>&1; then
-                kopiert=$((kopiert + 1))
-                [[ -n "${besitzer}" ]] && adb shell chown "${besitzer}" "${ziel}/${datei}"
-                adb shell restorecon "${ziel}/${datei}" >/dev/null 2>&1
+            local file="$1" dest="$2"
+            [[ -f "${SRC}/lawnchair/${file}" ]] || return 0
+            total=$((total + 1))
+            adb push "${SRC}/lawnchair/${file}" "/data/local/tmp/${file}" >/dev/null 2>&1
+            if adb shell cp "/data/local/tmp/${file}" "${dest}/${file}" >/dev/null 2>&1; then
+                copied=$((copied + 1))
+                [[ -n "${owner}" ]] && adb shell chown "${owner}" "${dest}/${file}"
+                adb shell restorecon "${dest}/${file}" >/dev/null 2>&1
             fi
-            adb shell rm -f "/data/local/tmp/${datei}"
+            adb shell rm -f "/data/local/tmp/${file}"
         }
 
         adb shell mkdir -p /data/data/app.lawnchair/files/datastore >/dev/null 2>&1
@@ -153,11 +153,11 @@ if [[ -f "${APK}/lawnchair.apk" ]]; then
                         /data/data/app.lawnchair/databases/preferences-shm \
                         /data/data/app.lawnchair/databases/launcher_5_4_4.db-journal >/dev/null 2>&1
 
-        if [[ "${kopiert}" -ne "${gesamt}" ]]; then
-            echo "[svc-branding] Lawnchair: nur ${kopiert} von ${gesamt} Einstellungsdateien kamen an"
+        if [[ "${copied}" -ne "${total}" ]]; then
+            echo "[svc-branding] Lawnchair: only ${copied} of ${total} settings files arrived"
         fi
     else
-        echo "[svc-branding] Lawnchair liess sich nicht installieren, Pixel Launcher bleibt"
+        echo "[svc-branding] Lawnchair did not install, the Pixel Launcher stays"
     fi
 fi
 
@@ -166,33 +166,33 @@ fi
 adb shell stop
 sleep 3
 adb shell start
-if warte_auf_start; then
+if wait_for_boot; then
     # The default launcher is set only after the framework restart, which would
     # otherwise undo it. Right after boot_completed the package manager still
     # answers Success and then drops the setting, so it is set and checked
     # until it holds. The full class name is needed because the short form
     # with a leading dot is not accepted everywhere.
-    heim=""
+    home=""
     for _ in $(seq 1 12); do
         adb shell cmd package set-home-activity \
             app.lawnchair/app.lawnchair.LawnchairLauncher >/dev/null 2>&1
         sleep 5
-        heim="$(adb shell cmd package resolve-activity -c android.intent.category.HOME \
+        home="$(adb shell cmd package resolve-activity -c android.intent.category.HOME \
                     -a android.intent.action.MAIN 2>/dev/null | grep -m1 packageName | tr -d ' \r')"
-        [[ "${heim}" == *"app.lawnchair"* ]] && break
+        [[ "${home}" == *"app.lawnchair"* ]] && break
     done
 
-    if [[ "${heim}" == *"app.lawnchair"* ]]; then
-        echo "[svc-branding] Lawnchair mit Arcticons ist der Startbildschirm"
+    if [[ "${home}" == *"app.lawnchair"* ]]; then
+        echo "[svc-branding] Lawnchair with Arcticons is the home screen"
     else
-        echo "[svc-branding] Startbildschirm blieb ${heim:-unbekannt}, Lawnchair griff nicht"
+        echo "[svc-branding] the home screen stayed ${home:-unknown}, Lawnchair did not take"
     fi
     adb shell input keyevent KEYCODE_HOME >/dev/null 2>&1
 
-    echo "[svc-branding] gesetzt"
-    touch "${MARKE}"
+    echo "[svc-branding] done"
+    touch "${MARKER}"
 else
-    echo "[svc-branding] Android kam nach dem Neustart nicht wieder hoch"
+    echo "[svc-branding] Android did not come back up after the restart"
 fi
 
-fertig
+finish
