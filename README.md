@@ -88,19 +88,15 @@ This container runs the **real Android emulator** - the same AVD Android Studio 
 ## 2. Screenshots
 
 <p align="center">
-  <img src=".github/assets/screenshots/desktop.png" alt="The emulator window on the Selkies desktop, seen in a browser" width="45%">
-  <br><em>Android 16 on the Selkies desktop, in a browser. The strip on the right is the emulator's own toolbar, not part of the phone.</em>
+  <img src=".github/assets/screenshots/desktop.png" alt="The emulated phone and a terminal on the Selkies desktop, seen in a browser" width="100%">
+  <br><em>Android 16 on the Selkies desktop, in a browser. The strip beside the phone is the emulator's own toolbar, and the terminal is one right-click away.</em>
 </p>
 
 <br>
 
 <p align="center">
-  <img src=".github/assets/screenshots/all-apps.png" alt="The app drawer on the emulated device" width="26%">
-  &nbsp;
-  <img src=".github/assets/screenshots/share.png" alt="The share folder on the device, holding an APK" width="26%">
-  &nbsp;
-  <img src=".github/assets/screenshots/about.png" alt="Android 16, API 36, reported by the device itself" width="26%">
-  <br><em>The app drawer, with an APK installed over adb. Anything dropped into <code>/share</code> turns up under <code>Download/share</code>, so a build can be installed by tapping it. And the device says what it is: Android 16, API 36.</em>
+  <img src=".github/assets/screenshots/device.png" alt="The share folder in the Files app, the app drawer and the Android version page on the emulated device" width="100%">
+  <br><em>Anything dropped into <code>/share</code> turns up under <code>Download/share</code>, so a build can be installed by tapping it. The app drawer shows it installed, and the device says what it is: Android 16.</em>
 </p>
 
 <br>
