@@ -63,29 +63,15 @@ If it has earned a place on your server or computer, toss a coin to your knight:
 
 ## Table of Contents
 
-1. [What it is](#1-what-it-is)
-2. [Screenshots](#2-screenshots)
-3. [Why not Android-in-a-container](#3-why-not-android-in-a-container)
-4. [Why not budtmo/docker-android](#4-why-not-budtmodocker-android)
-5. [Which Android](#5-which-android)
-6. [Running it](#6-running-it)
-7. [Using it](#7-using-it)
-8. [What persists](#8-what-persists)
-9. [Two things to know](#9-two-things-to-know)
-10. [How AI is used here](#10-how-ai-is-used-here)
-11. [Support this project](#11-support-this-project)
+1. [What it looks like](#1-what-it-looks-like)
+2. [What it does](#2-what-it-does)
+3. [Getting started](#3-getting-started)
+4. [How AI is used here](#4-how-ai-is-used-here)
+5. [Support this project](#5-support-this-project)
 
 <br>
 
-## 1. What it is
-
-A straw droid is a practice dummy shaped like an Android phone: built like the real thing so somebody can strike at it without anybody getting hurt.
-
-This container runs the **real Android emulator** - the same AVD Android Studio starts - headless on a [Selkies](https://github.com/selkies-project/selkies) desktop. The screen arrives in a browser over WebRTC, and `adb` reaches it over the network, so Android Studio deploys and debugs on it exactly like a phone on a cable.
-
-<br>
-
-## 2. Screenshots
+## 1. What it looks like
 
 <p align="center">
   <img src=".github/assets/screenshots/desktop.png" alt="The emulated phone and a terminal on the Selkies desktop, seen in a browser" width="100%">
@@ -101,43 +87,22 @@ This container runs the **real Android emulator** - the same AVD Android Studio 
 
 <br>
 
-## 3. Why not Android-in-a-container
+## 2. What it does
 
-ReDroid and Waydroid run the Android userspace directly on the host kernel. They are lighter, they need no KVM, and for testing a layout they are fine.
+A straw droid is a practice dummy shaped like an Android phone: built like the real thing so somebody can strike at it without anybody getting hurt.
 
-They are the wrong tool for a **sync** app, and the reason is what they do not have: no battery, no motion sensor, no power HAL. Doze is decided by `DeviceIdleController` from exactly those signals, so in a container it never fires. WorkManager then runs more eagerly than it ever would on somebody's phone, and Android 14's limits on a `dataSync` foreground service never kick in either.
-
-A rig that is green because it never asks the question is worse than no rig at all. A real AVD answers, and it answers on demand:
-
-```
-adb shell dumpsys deviceidle force-idle
-```
-
-<br>
-
-## 4. Why not budtmo/docker-android
-
-[budtmo/docker-android](https://github.com/budtmo/docker-android) does the same job and is well kept, on a monthly release cadence. Its screen is x11vnc behind noVNC: a framebuffer diff over websockets, with no hardware encoding.
-
-Judging how an app *feels* is judging its scrolling and its transitions, which is the part noVNC smears. This image puts the emulator on the same Selkies desktop as the rest of the house, hardware-encoded on the box's own GPU.
+- **The real emulator.** It runs the same AVD Android Studio starts, headless on a [Selkies](https://github.com/selkies-project/selkies) desktop. It has a battery, a motion sensor and a power HAL, so Doze and Android's limits on background work behave as they do on a phone. Android in a container such as ReDroid or Waydroid has none of these, and there Doze never fires.
+- **The screen in a browser.** The desktop arrives over WebRTC, encoded on the box's own GPU, so scrolling and transitions look the way they will on a phone.
+- **Deploys like a phone on a cable.** `adb` reaches the device over the network, and Android Studio installs and debugs on it as on any other device.
+- **Android 16, API 36, `google_apis`, x86_64.** The newest level is also the strictest about background work. The image carries Play services and the real DocumentsUI, the folder picker an app asks for a folder with.
+- **APKs from a share.** A folder mounted at `/share` shows up on the device under `Download/share`, and the `sk` helper in the container's terminal installs from it.
+- **A device that stays.** `/config` holds the AVD with its apps, permissions and test data. On first boot it gets a wallpaper, dark mode, an empty home screen, the [Lawnchair](https://github.com/LawnchairLauncher/lawnchair) launcher (Apache-2.0) and the [Arcticons](https://github.com/Donnnno/Arcticons) line icons by Donnnno (GPL-3.0). Whatever you change afterwards stays as you set it.
 
 <br>
 
-## 5. Which Android
+## 3. Getting started
 
-**16, API 36, `google_apis`, x86_64**, and the level is the newest on purpose.
-
-This started at 14, reasoning that Android 14 is where the six-hour daily cap on `dataSync` foreground services landed. That was too cautious: 15 keeps the cap and adds a timeout on top, 16 keeps both, so the newest level is the **strictest** rather than a different one - and the Play Store wants a recent target level for a new submission anyway. Pinning to 14 would have been testing a rule more lenient than the one the app ships under.
-
-`google_apis` rather than plain AOSP, because it carries Play services and a real DocumentsUI, which is the SAF folder picker an app asks for a folder with. An image without one cannot answer whether that flow works at all.
-
-Only one level is installed, and that has a consequence: an AVD in the persistent volume names its system image by path, so raising `ANDROID_API` leaves the existing device pointing at an image the container no longer has. The boot script notices, moves the stale device aside as `<name>.avd.old-<stamp>`, says in the log that everything installed on it is gone with it, and builds a fresh one.
-
-<br>
-
-## 6. Running it
-
-Needs `/dev/kvm`. On bare metal that is simply there; no nested virtualisation is involved. Without it the emulator does not start, and the container log says so in as many words rather than leaving a black rectangle.
+StrawDroid needs `/dev/kvm`. On bare metal it is simply there. Without it the emulator does not start, and the container log says so.
 
 ```
 docker run -d --name StrawDroid \
@@ -148,36 +113,24 @@ docker run -d --name StrawDroid \
   ghcr.io/junkerderprovinz/strawdroid:latest
 ```
 
-`PUID` and `PGID` decide who owns `/config`, and they should be the user that owns the directory on the host. The defaults above are Unraid's `nobody:users`; on a plain Linux box `$(id -u):$(id -g)` is usually what you want.
+`PUID` and `PGID` should be the user that owns `/path/to/config` on the host. The values above are Unraid's `nobody:users`; on a plain Linux box `$(id -u)` and `$(id -g)` are usually right. On Unraid use [`templates/strawdroid.xml`](templates/strawdroid.xml), which puts the container on its own IP so no port mapping is needed.
 
-On Unraid use [`templates/strawdroid.xml`](templates/strawdroid.xml), which puts it on its own IP so no port mapping is needed.
+The container does not restart on its own. An emulator is a virtual machine and holds about 6 GB of memory even when idle, so start it when you need it and stop it after.
 
-**It is deliberately not set to restart on its own.** An emulator is a virtual machine and holds its memory whether anybody is testing or not: measured idle, with no app installed, about 6 GB. Start it when it is needed and stop it after.
+**On Windows and on a desktop Linux,** the two start scripts at the top check KVM and start the container. Docker is required either way. On Windows the script also switches on nested virtualisation for WSL2 and loads KVM there, on every run, because Docker Desktop rebuilds its WSL machine whenever it restarts. Right-click [`start-windows.ps1`](scripts/start-windows.ps1) and choose *Run with PowerShell*; if the execution policy stops it, `powershell -ExecutionPolicy Bypass -File start-windows.ps1` runs it once. On Linux, `chmod +x start-linux.sh && ./start-linux.sh`. Both are plain text, so read them before you run them.
 
-### On Windows and on a desktop Linux
-
-The two start scripts at the top are the short way in. They check the one thing that decides whether this works, start the container, and then get out of the way. They are not the product: the payload is a Linux image that needs KVM, so Docker is required either way.
-
-On Windows the checking is the point. The container runs inside the WSL2 machine, so KVM has to work inside a VM. That needs `nestedVirtualization=true` in `%USERPROFILE%\.wslconfig`, a file nothing prompts you to create. Even then the KVM module is not loaded when that machine boots, so `/dev/kvm` does not exist until something loads it, and when it appears it belongs to root with mode 600 while the emulator runs as an ordinary user. All three are handled on every run, because Docker Desktop rebuilds the WSL machine whenever it restarts.
-
-On Windows, right-click [`start-windows.ps1`](scripts/start-windows.ps1) and choose *Run with PowerShell*; if the execution policy stops it, `powershell -ExecutionPolicy Bypass -File start-windows.ps1` runs it once without changing anything. On Linux, `chmod +x start-linux.sh && ./start-linux.sh`. Both are plain text: read them before you run them.
-
-<br>
-
-## 7. Using it
+Once it runs:
 
 | | |
 |---|---|
-| Screen | `https://<address>:3001/` - self-signed certificate, accept it once. No login. |
+| Screen | `https://<address>:3001/`, with a self-signed certificate to accept once. No login. |
 | Deploy | `adb connect <address>:5555`, then Android Studio treats it as an ordinary device. |
 | Force Doze | `adb -s <address>:5555 shell dumpsys deviceidle force-idle` |
 | Undo it | `adb -s <address>:5555 shell dumpsys deviceidle unforce` |
 
-The container's log ends on a banner carrying all three lines with the real address filled in.
+The container log ends on a banner with these lines and the real address filled in.
 
-### From the container's own terminal
-
-Mount a share read-only at `/share` and an APK dropped into it from anywhere on the network can be installed without leaving the browser. `sk` is the helper:
+Mount a folder read-only at `/share` to install builds from it. On the device it is copied to `Download/share` every 30 seconds (`SHARE_MIRROR_SECONDS`), up to 2048 MB (`SHARE_MIRROR_MAX_MB`). In the container's terminal, `sk` does the rest:
 
 ```
 sk list                    the APKs on the share, newest first
@@ -187,56 +140,11 @@ sk doze on | off           force deep idle, or release it
 sk shell [...]             a shell on the device
 ```
 
-A bare name is taken relative to the share, so `sk install arrowloop.apk` finds `/share/arrowloop.apk`.
-
-The share is mounted **read-only** on purpose: this rig runs unfinished code, and unfinished code has no business writing to a share full of everything else. `sk push` copies INTO the device instead, and tells the media scanner about it - without that the file is on the disk and absent from every chooser, which looks exactly like the push having silently failed.
-
-`sk doze on` unplugs the battery before forcing idle, which is not optional: a device that believes it is charging refuses to go idle, and the force then reports success while nothing happens.
-
-### The share, on the phone itself
-
-Everything in `/share` also appears **on the device**, under `Download/share`, where the stock Files app and the SAF picker both find it. So an APK dropped into the share from any machine on the network can be installed by tapping it on the phone, without touching a terminal at all.
-
-**Mirrored rather than mounted**, and that is the only thing available rather than a shortcut. The emulated phone is a virtual machine with its own kernel and its own disk image: a directory on the host is not reachable from inside it by any mount. The emulator has no shared-folder feature, Android's own Files app speaks no SMB, and an SD card image would be a snapshot rather than a live folder. What does cross the boundary is `adb`, so `svc-share-mirror` copies - one direction only, host to phone, matching the share's own read-only mount.
-
-It compares timestamps and sizes and sends only what differs, so the steady state costs one comparison every thirty seconds and no traffic. `SHARE_MIRROR_SECONDS` changes the interval.
-
-There is a **cap**, and on Unraid it matters: the share this is usually pointed at is the download folder, a place whose whole job is to grow. Above `SHARE_MIRROR_MAX_MB` (2048 by default) the mirror stops and says so in the log rather than filling the emulator's disk - which would otherwise surface much later as an app that will not install, for reasons that have nothing to do with the app. Refused rather than truncated: a mirror that quietly copies *some* of a folder is worse than one that says it stopped, because the missing file is the one somebody is looking for. `sk install` still works either way.
+The device profile and the emulated RAM are read on the first boot only. To change them later, remove the AVD from `/config/.android/avd`.
 
 <br>
 
-## 8. What persists
-
-`/config` only, and it holds the AVD itself: installed apps, granted permissions, anything a test wrote. That is not tidiness. Rebuilding the device on every start would silently reset the folder permission an app was granted through the SAF picker, which is one of the things being tested, and it would look like the app forgetting.
-
-The device profile and the emulated RAM are therefore read on **first boot only**. Changing them later needs the AVD removed from `/config/.android/avd`.
-
-The wallpaper and the monochrome icons are set the same way, once, on the first boot of a new AVD. A marker in `/config` stops them from being written again, so a wallpaper you pick yourself afterwards is yours and stays.
-
-<br>
-
-## 9. Two things to know
-
-**The ADB port is forwarded, not bound.** The emulator's own adb daemon listens on loopback and nothing else. A forwarder inside the container hands the outside port to it. Without that, the port looks open from a development machine and the handshake never completes, which reads as a network problem and is not one.
-
-**The emulator window is kept on screen.** Measured on the first working build, it opened at `y = -551` on a 768-pixel-tall desktop, so all but its last sixty pixels sat above the visible area - from the browser, indistinguishable from an emulator that never started. Selkies also resizes the desktop to whatever the browser window is, so a one-off placement would not hold either. A small service watches both and puts the window back whenever it has ended up outside, and leaves it alone whenever it has not.
-
-<br>
-
-### What is on the device, and where it came from
-
-The device is set up once, on the first boot of a new AVD, and then left alone: wallpaper, dark mode, an empty home screen, and a launcher whose icons are monochrome everywhere rather than only on the home screen. A marker in `/config` stops any of it being written a second time, so a wallpaper or a layout you set yourself is yours and stays.
-
-Two of those pieces are other people's work, shipped unmodified alongside the image and pinned to an exact version, which the build verifies by digest:
-
-- **[Lawnchair](https://github.com/LawnchairLauncher/lawnchair)**, Apache-2.0. The stock Pixel Launcher has no switch for its search bar, and its themed icons reach the home screen and the dock but not the app drawer. It also reads no icon packs, which is a launcher feature rather than an Android one.
-- **[Arcticons](https://github.com/Donnnno/Arcticons)** by Donnnno, GPL-3.0. The white line icons, which is what makes the drawer match the rest.
-
-Neither is required to use the emulator. If the launcher fails to install, the log says so and the device keeps the stock one.
-
-<br>
-
-## 10. How AI is used here
+## 4. How AI is used here
 
 One knight builds this, and AI is one of the tools I work with, the same way I work with an editor or a compiler. It helps me write code and documentation and it checks my work, and that saves me a good many evenings. It does not make the decisions, though. I read and understand everything before it ships, and if something here breaks, that is on me and not on the tool.
 
@@ -244,7 +152,7 @@ You do not have to take my word for it. The code is open and every release note 
 
 <br>
 
-## 11. Support this project
+## 5. Support this project
 
 Problems, wishes or suggestions? You're welcome to [open an issue](https://github.com/junkerderprovinz/strawdroid/issues).
 
