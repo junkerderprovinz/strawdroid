@@ -1,7 +1,7 @@
 # Glyphs
 
 Path data for the download buttons, taken from
-[Font Awesome Free](https://fontawesome.com). The icons are licensed
+[Font Awesome Free 6.7.2](https://fontawesome.com). The icons are licensed
 **CC BY 4.0**; Font Awesome's fonts are OFL and its code MIT, neither of which
 is used here.
 
@@ -10,7 +10,8 @@ is used here.
   archive, not anybody's mark, so nothing below applies to it.
 
 `<name>.box.txt` is the glyph's own viewBox, so the generator can pull glyphs
-of different proportions to one optical size.
+of different proportions to one optical size. Each glyph is drawn in the
+button's one ink.
 
 Each brand mark is a trademark of its owner and is used the one way a trademark
 may be used without permission: to name the thing it points at. Each button
