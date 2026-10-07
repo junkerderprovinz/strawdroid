@@ -1,0 +1,72 @@
+#!/usr/bin/with-contenv bash
+# shellcheck shell=bash
+# ROOT=true gives apps root, for testing an app's root mode. Once per AVD, su
+# and strawdroid-sud go into the system partition; on every boot the daemon is
+# started as root and SELinux is set to permissive, because enforcing would deny
+# an app talking to it. A phone rooted with Magisk usually stays enforcing, so
+# this is a test rig's root rather than a copy of one, and it is off by default.
+LIB=/usr/local/lib/strawdroid
+MARKER="${ANDROID_AVD_HOME:-/config/.android/avd}/${AVD_NAME:-strawdroid}.avd/.strawdroid-root"
+
+if [[ "${ROOT,,}" != "true" ]]; then
+    exec sleep infinity
+fi
+
+booted() {
+    [[ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r\n')" == "1" ]]
+}
+
+wait_for_boot() {
+    adb wait-for-device >/dev/null 2>&1
+    for _ in $(seq 1 120); do
+        booted && return 0
+        sleep 3
+    done
+    return 1
+}
+
+# adb root restarts adbd, so the device is waited for on both sides of it.
+as_root() {
+    wait_for_boot
+    adb root >/dev/null 2>&1
+    wait_for_boot
+}
+
+install_su() {
+    as_root
+    # The first remount switches off verity and only takes effect after a
+    # reboot; the next round of the loop then finds the partition writable.
+    if adb remount 2>&1 | grep -qi reboot; then
+        echo "[svc-root] rebooting once so the system partition can be written"
+        adb reboot >/dev/null 2>&1
+        sleep 15
+        return 1
+    fi
+    # /system/xbin is closed to apps, so su goes to /system/bin.
+    adb push "${LIB}/su" /system/bin/su >/dev/null &&
+        adb push "${LIB}/strawdroid-sud" /system/bin/strawdroid-sud >/dev/null &&
+        adb shell chmod 755 /system/bin/su /system/bin/strawdroid-sud &&
+        adb shell chcon u:object_r:system_file:s0 /system/bin/su /system/bin/strawdroid-sud &&
+        touch "${MARKER}" &&
+        echo "[svc-root] su is installed"
+}
+
+# On a fresh AVD svc-branding restarts adbd and the framework first.
+for _ in $(seq 1 300); do
+    [[ -f /run/strawdroid-branding-done ]] && break
+    sleep 2
+done
+
+while :; do
+    if booted; then
+        [[ -f "${MARKER}" ]] || install_su
+        if [[ -f "${MARKER}" ]] && ! adb shell pidof strawdroid-sud >/dev/null 2>&1; then
+            as_root
+            adb shell setenforce 0
+            if adb shell /system/bin/strawdroid-sud; then
+                echo "[svc-root] root daemon started, apps can use su"
+            fi
+        fi
+    fi
+    sleep 30
+done
