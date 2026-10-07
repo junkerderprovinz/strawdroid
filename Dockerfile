@@ -170,16 +170,21 @@ RUN set -eux; \
     echo "${PCAPDROID_SHA}  /defaults/apk/pcapdroid.apk" | sha256sum -c -; \
     ls -l /defaults/apk
 
-# svc-emulator preloads this so the modem, and with it calls and SMS, works on
-# a Docker network; lib/numeric-addrconfig.c has the details.
-COPY lib/numeric-addrconfig.c /tmp/numeric-addrconfig.c
+# svc-emulator preloads the first so the modem, and with it calls and SMS,
+# works on a Docker network; lib/numeric-addrconfig.c has the details. su and
+# strawdroid-sud give apps root with ROOT=true. su runs inside apps, whose
+# seccomp filter kills glibc's static start-up code, so both are built with
+# musl.
+COPY lib/ /tmp/lib/
 RUN set -eux; \
     apt-get update; \
-    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends gcc libc6-dev; \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends gcc libc6-dev musl-tools; \
     mkdir -p /usr/local/lib/strawdroid; \
     gcc -O2 -Wall -Wextra -Werror -shared -fPIC \
-        -o /usr/local/lib/strawdroid/libnumeric-addrconfig.so /tmp/numeric-addrconfig.c; \
-    apt-get purge -y --auto-remove gcc libc6-dev; \
+        -o /usr/local/lib/strawdroid/libnumeric-addrconfig.so /tmp/lib/numeric-addrconfig.c; \
+    musl-gcc -O2 -Wall -Wextra -Werror -static -o /usr/local/lib/strawdroid/su /tmp/lib/su.c; \
+    musl-gcc -O2 -Wall -Wextra -Werror -static -o /usr/local/lib/strawdroid/strawdroid-sud /tmp/lib/sud.c; \
+    apt-get purge -y --auto-remove gcc libc6-dev musl-tools; \
     apt-get clean; \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
@@ -206,6 +211,7 @@ RUN chmod +x \
     /etc/s6-overlay/s6-rc.d/svc-strawdroid-ready/run \
     /etc/s6-overlay/s6-rc.d/svc-branding/run \
     /etc/s6-overlay/s6-rc.d/svc-test-tools/run \
+    /etc/s6-overlay/s6-rc.d/svc-root/run \
     /defaults/autostart \
     /defaults/startwm.sh
 
@@ -244,7 +250,8 @@ ENV EMULATOR_CAMERA_BACK=emulated \
     EMULATOR_CAMERA_FRONT=emulated \
     EMULATOR_AUDIO=true \
     EMULATOR_PHONE_NUMBER=12015550123 \
-    TEST_TOOLS=true
+    TEST_TOOLS=true \
+    ROOT=false
 
 # No noVNC on 6080: the screen is Selkies on 3000/3001, and ADB is 5555.
 EXPOSE 5555

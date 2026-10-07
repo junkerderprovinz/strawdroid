@@ -31,6 +31,12 @@ if [[ -n "${EMULATOR_PHONE_NUMBER}" ]]; then
     args+=(-phone-number "${EMULATOR_PHONE_NUMBER}")
 fi
 
+# svc-root puts su into the system partition, which stays read-only without
+# this.
+if [[ "${ROOT,,}" == "true" ]]; then
+    args+=(-writable-system)
+fi
+
 # Selkies runs PulseAudio for the desktop, so the emulator's sound reaches the
 # browser through it.
 if [[ "${EMULATOR_AUDIO,,}" != "true" ]]; then
