@@ -1,0 +1,3 @@
+StrawDroid test note
+
+Umlauts: äöüß, and an emoji: 📱
