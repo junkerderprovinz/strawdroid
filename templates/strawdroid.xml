@@ -35,7 +35,13 @@
     Everything a phone has that the emulator can fake is switched on: a SIM&#13;
     that takes calls and SMS, a front and a back camera, every sensor the&#13;
     image offers (heart rate and wrist tilt among them), Bluetooth, and sound&#13;
-    in the browser. Shizuku and PCAPdroid come installed for testing.&#13;
+    in the browser. Shizuku and PCAPdroid come installed for testing, and&#13;
+    ROOT=true gives apps root. Android 14 is available as the latest-api34&#13;
+    tag.&#13;
+    &#13;
+    Flutter apps need vm.overcommit_memory=1 on the host: without it the&#13;
+    emulator crashes as soon as one draws. Add sysctl -w&#13;
+    vm.overcommit_memory=1 to /boot/config/go to keep it after a reboot.&#13;
     &#13;
     Screen: Selkies over HTTPS on 3001. No login.&#13;
     &#13;
@@ -78,6 +84,7 @@
   <Config Name="Front camera (EMULATOR_CAMERA_FRONT)" Target="EMULATOR_CAMERA_FRONT" Default="emulated" Mode="" Description="Same choices as the back camera." Type="Variable" Display="advanced" Required="false" Mask="false">emulated</Config>
   <Config Name="Sound (EMULATOR_AUDIO)" Target="EMULATOR_AUDIO" Default="true" Mode="" Description="true sends the phone's sound to the browser tab, through the desktop's own audio. false starts the emulator without audio." Type="Variable" Display="advanced" Required="false" Mask="false">true</Config>
   <Config Name="Test tools (TEST_TOOLS)" Target="TEST_TOOLS" Default="true" Mode="" Description="true installs Shizuku and PCAPdroid once on each new device and starts the Shizuku server again after every boot, so apps that need it find it running. PCAPdroid shows which hosts an app talks to, without root. false leaves both alone." Type="Variable" Display="advanced" Required="false" Mask="false">true</Config>
+  <Config Name="Root for apps (ROOT)" Target="ROOT" Default="false" Mode="" Description="true gives apps root through su, for testing an app's root mode. The first start with it reboots the phone once to make the system partition writable. SELinux runs permissive then, unlike on most rooted phones, so leave it false unless a test needs root." Type="Variable" Display="advanced" Required="false" Mask="false">false</Config>
   <Config Name="Extra emulator arguments (EMULATOR_EXTRA_ARGS)" Target="EMULATOR_EXTRA_ARGS" Default="" Mode="" Description="Passed to the emulator verbatim, for the occasional one-off (-writable-system, -dns-server, -netdelay). Empty is the ordinary case." Type="Variable" Display="advanced" Required="false" Mask="false"/>
   <Config Name="AVD name (AVD_NAME)" Target="AVD_NAME" Default="strawdroid" Mode="" Description="The name of the virtual device inside /config. Changing it creates a SECOND device rather than renaming the first, which is a way to keep two side by side." Type="Variable" Display="advanced" Required="false" Mask="false">strawdroid</Config>
   <Config Name="WebUI Username" Target="CUSTOM_USER" Default="" Mode="" Description="Optional. Leave EMPTY together with the password for no login. Set both to enable login." Type="Variable" Display="always" Required="false" Mask="false"/>

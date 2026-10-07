@@ -96,9 +96,10 @@ A straw droid is a practice dummy shaped like an Android phone: built like the r
 - **The real emulator.** It runs the same AVD Android Studio starts, headless on a [Selkies](https://github.com/selkies-project/selkies) desktop. It has a battery, a motion sensor and a power HAL, so Doze and Android's limits on background work behave as they do on a phone. Android in a container such as ReDroid or Waydroid has none of these, and there Doze never fires.
 - **The screen in a browser.** The desktop arrives over WebRTC, encoded on the box's own GPU, so scrolling and transitions look the way they will on a phone.
 - **Deploys like a phone on a cable.** `adb` reaches the device over the network, and Android Studio installs and debugs on it as on any other device.
-- **Android 16, API 36, `google_apis`, x86_64.** The newest level is also the strictest about background work. The image carries Play services and the real DocumentsUI, the folder picker an app asks for a folder with.
+- **Android 16, API 36, `google_apis`, x86_64.** The newest level is also the strictest about background work. The image carries Play services and the real DocumentsUI, the folder picker an app asks for a folder with. For faults that only show on an older level, Android 14 (API 34) is published as well, under the `latest-api34` tag.
 - **A phone in full.** The SIM takes calls and SMS, and its number is one that SMS apps accept. Both cameras show the emulator's test scene, every sensor the image offers is on (heart rate and wrist tilt among them), Bluetooth is on, and the phone's sound plays in the browser tab.
 - **Tools for testing on board.** [Shizuku](https://github.com/RikkaApps/Shizuku) (Apache-2.0) is started again after every boot, for apps that need the shell's privileges, and [PCAPdroid](https://github.com/emanuele-f/PCAPdroid) (GPL-3.0) shows which hosts an app talks to. `TEST_TOOLS=false` keeps both off the device.
+- **Root when a test needs it.** `ROOT=true` gives apps root through `su`, for testing an app's root mode. SELinux is permissive then, unlike on most rooted phones, so it stays off unless a test asks for it.
 - **Nothing lost on stop.** When the container stops, Android writes its files to disk first, so whatever a test did just before a `docker stop` is still there after the next start.
 - **APKs from a share.** A folder mounted at `/share` shows up on the device under `Download/share`, and the `sk` helper in the container's terminal installs from it.
 - **A device that stays.** `/config` holds the AVD with its apps, permissions and test data. On first boot it gets a wallpaper, dark mode, an empty home screen, the [Lawnchair](https://github.com/LawnchairLauncher/lawnchair) launcher (Apache-2.0) and the [Arcticons](https://github.com/Donnnno/Arcticons) line icons by Donnnno (GPL-3.0). Whatever you change afterwards stays as you set it.
@@ -119,6 +120,8 @@ docker run -d --name StrawDroid \
 ```
 
 `PUID` and `PGID` should be the user that owns `/path/to/config` on the host. The values above are Unraid's `nobody:users`; on a plain Linux box `$(id -u)` and `$(id -g)` are usually right. On Unraid use [`templates/strawdroid.xml`](templates/strawdroid.xml), which puts the container on its own IP so no port mapping is needed.
+
+**Flutter apps need one setting on the host.** Their renderer makes the emulator reserve tens of terabytes of address space, of which it uses a few gigabytes. In Linux's default overcommit mode a reservation that large is refused, and the emulator crashes as soon as a Flutter app draws. `sysctl -w vm.overcommit_memory=1` on the host fixes it; on Unraid, add that line to `/boot/config/go` to keep it after a reboot. The setting belongs to the host, so the container cannot change it, but its log warns while it is still 0.
 
 The container does not restart on its own. An emulator is a virtual machine and holds about 6 GB of memory even when idle, so start it when you need it and stop it after.
 
@@ -145,12 +148,23 @@ sk doze on | off           force deep idle, or release it
 sk sms <number> <text>     an incoming SMS from that number
 sk call <number>           an incoming call from that number
 sk geo <lat> <lon>         put the device at that position
+sk seed                    test contacts, photos with GPS, music with BPM tags,
+                           a video and documents on the device
+sk lang de-AT              switch the system language
+sk dark on | off           dark or light theme
+sk snap save <name>        save the whole device, and load, rm or list snapshots
+sk reset                   back to the snapshot called "clean" in seconds
+sk netlog start <package>  record which hosts an app talks to, through PCAPdroid
+sk netlog stop             stop and list them
+sk shot | sk record [s]    a screenshot or a screen recording
 sk shell [...]             a shell on the device
 ```
 
+Screenshots, recordings and network captures land in `/config/captures`. A snapshot lives with the AVD in `/config` and takes about 2.5 GB.
+
 The device profile and the emulated RAM are read on the first boot only. To change them later, remove the AVD from `/config/.android/avd`.
 
-Cameras, sound, the phone number and the test tools take effect on every start: `EMULATOR_CAMERA_BACK` and `EMULATOR_CAMERA_FRONT` (`emulated` or `none`), `EMULATOR_AUDIO` and `TEST_TOOLS` (`true` or `false`), and `EMULATOR_PHONE_NUMBER`. The Unraid template explains each one.
+Cameras, sound, the phone number and the test tools take effect on every start: `EMULATOR_CAMERA_BACK` and `EMULATOR_CAMERA_FRONT` (`emulated` or `none`), `EMULATOR_AUDIO`, `TEST_TOOLS` and `ROOT` (`true` or `false`), and `EMULATOR_PHONE_NUMBER`. The Unraid template explains each one.
 
 <br>
 
