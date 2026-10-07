@@ -26,9 +26,20 @@ env:
 
 jobs:
   build:
-    name: Build and publish (amd64)
+    name: Build and publish (amd64, API ${{ matrix.api }})
     runs-on: ubuntu-latest
     timeout-minutes: 90
+    # Android 14 as a second image, because some faults only show on an older
+    # level. Its tags carry the suffix, so latest-api34 is the newest release
+    # on API 34.
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - api: 36
+            suffix: ""
+          - api: 34
+            suffix: "-api34"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
@@ -89,6 +100,8 @@ jobs:
         id: meta
         uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6
         with:
+          flavor: |
+            suffix=${{ matrix.suffix }},onlatest=true
           images: |
             ${{ env.IMAGE }}
             name=docker.io/${{ vars.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }},enable=${{ vars.DOCKERHUB_USERNAME != '' }}
@@ -112,15 +125,17 @@ jobs:
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          build-args: |
+            ANDROID_API=${{ matrix.api }}
+          cache-from: type=gha,scope=api${{ matrix.api }}
+          cache-to: type=gha,mode=max,scope=api${{ matrix.api }}
           provenance: false
 
       # The README's download buttons point at releases/latest/download/. A
       # release asset is served with Content-Disposition: attachment and
       # downloads, where a raw file in the repo would open as text/plain in a tab.
       - name: Attach the downloads to the release
-        if: github.ref_type == 'tag'
+        if: github.ref_type == 'tag' && matrix.api == 36
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
