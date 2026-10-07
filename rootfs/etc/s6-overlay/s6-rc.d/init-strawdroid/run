@@ -74,6 +74,20 @@ else
     log "AVD created"
 fi
 
+# avdmanager leaves four sensors off that the emulator can feed, and an app that
+# finds no heart rate or heading sensor takes a different path than on a phone
+# that has one. They are set on every start, so a device created by an earlier
+# image gets them too.
+cfg="${AVD_DIR}/config.ini"
+for sensor in heading heart_rate rgbclight wrist_tilt; do
+    if grep -q "^hw\.sensors\.${sensor}=" "${cfg}"; then
+        sed -i "s/^hw\.sensors\.${sensor}=.*/hw.sensors.${sensor}=yes/" "${cfg}"
+    else
+        echo "hw.sensors.${sensor}=yes" >> "${cfg}"
+    fi
+done
+log "all emulated sensors switched on"
+
 # abc is the user the emulator runs as, remapped to PUID:PGID by init-adduser.
 # A default of 99:100 would be wrong when PUID is unset (abc is then 911), and
 # the emulator would fail with "A snapshot operation ... is pending", which

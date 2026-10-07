@@ -1,0 +1,14 @@
+#!/usr/bin/with-contenv bash
+# shellcheck shell=bash
+# Runs when the container stops, before the emulator is ended, and writes what
+# Android still holds in memory to the virtual disk. docker stop ends the
+# emulator within seconds, and a file written just before would otherwise come
+# back empty on the next start.
+if [[ "$(timeout 5 adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r\n')" != "1" ]]; then
+    exit 0
+fi
+if timeout 15 adb shell sync >/dev/null 2>&1; then
+    echo "[sync-on-stop] Android's files are written to disk"
+else
+    echo "[sync-on-stop] sync did not finish, the last writes may be lost"
+fi
