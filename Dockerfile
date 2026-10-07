@@ -153,6 +153,36 @@ RUN set -eux; \
     echo "${ARCTICONS_SHA}  /defaults/apk/arcticons.apk" | sha256sum -c -; \
     ls -l /defaults/apk
 
+# svc-test-tools installs Shizuku (Apache-2.0) and PCAPdroid (GPL-3.0) the same
+# way: pinned, checksum-verified, unmodified, and credited in the README.
+ARG SHIZUKU_TAG=v13.6.0
+ARG SHIZUKU_FILE=shizuku-v13.6.0.r1086.2650830c-release.apk
+ARG SHIZUKU_SHA=6e273ab0e991c4e79bc8b1bbb9b9dd739ccac1a8712a541a214078886b7b790f
+ARG PCAPDROID_VERSION=2.0.2
+ARG PCAPDROID_SHA=eb437cbe10e2c7e332c06d7401d8f9036c3722747f541e6e231d1bd9ab6dbffc
+
+RUN set -eux; \
+    curl -fsSL -o /defaults/apk/shizuku.apk \
+      "https://github.com/RikkaApps/Shizuku/releases/download/${SHIZUKU_TAG}/${SHIZUKU_FILE}"; \
+    echo "${SHIZUKU_SHA}  /defaults/apk/shizuku.apk" | sha256sum -c -; \
+    curl -fsSL -o /defaults/apk/pcapdroid.apk \
+      "https://github.com/emanuele-f/PCAPdroid/releases/download/v${PCAPDROID_VERSION}/PCAPdroid_v${PCAPDROID_VERSION}.apk"; \
+    echo "${PCAPDROID_SHA}  /defaults/apk/pcapdroid.apk" | sha256sum -c -; \
+    ls -l /defaults/apk
+
+# svc-emulator preloads this so the modem, and with it calls and SMS, works on
+# a Docker network; lib/numeric-addrconfig.c has the details.
+COPY lib/numeric-addrconfig.c /tmp/numeric-addrconfig.c
+RUN set -eux; \
+    apt-get update; \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends gcc libc6-dev; \
+    mkdir -p /usr/local/lib/strawdroid; \
+    gcc -O2 -Wall -Wextra -Werror -shared -fPIC \
+        -o /usr/local/lib/strawdroid/libnumeric-addrconfig.so /tmp/numeric-addrconfig.c; \
+    apt-get purge -y --auto-remove gcc libc6-dev; \
+    apt-get clean; \
+    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
 COPY rootfs/ /
 
 # Suppress the base image's branding so the log ends on our own READY banner.
@@ -166,6 +196,7 @@ RUN set -eux; \
 RUN chmod +x \
     /usr/local/bin/print-banner.sh \
     /usr/local/bin/sk \
+    /usr/local/bin/strawdroid-sync \
     /etc/s6-overlay/s6-rc.d/init-nologin/run \
     /etc/s6-overlay/s6-rc.d/init-strawdroid/run \
     /etc/s6-overlay/s6-rc.d/svc-emulator/run \
@@ -174,6 +205,7 @@ RUN chmod +x \
     /etc/s6-overlay/s6-rc.d/svc-share-mirror/run \
     /etc/s6-overlay/s6-rc.d/svc-strawdroid-ready/run \
     /etc/s6-overlay/s6-rc.d/svc-branding/run \
+    /etc/s6-overlay/s6-rc.d/svc-test-tools/run \
     /defaults/autostart \
     /defaults/startwm.sh
 
@@ -204,6 +236,15 @@ ENV EMULATOR_GPU=swiftshader_indirect \
     EMULATOR_DEVICE=pixel_6 \
     EMULATOR_RAM=2048 \
     EMULATOR_EXTRA_ARGS=""
+
+# Everything a phone has that the emulator can fake is on by default: both
+# cameras show the emulator's test scene, sound goes to the browser, and the
+# SIM has a number SMS apps accept (libphonenumber's own US example).
+ENV EMULATOR_CAMERA_BACK=emulated \
+    EMULATOR_CAMERA_FRONT=emulated \
+    EMULATOR_AUDIO=true \
+    EMULATOR_PHONE_NUMBER=12015550123 \
+    TEST_TOOLS=true
 
 # No noVNC on 6080: the screen is Selkies on 3000/3001, and ADB is 5555.
 EXPOSE 5555

@@ -1,0 +1,49 @@
+#!/usr/bin/with-contenv bash
+# shellcheck shell=bash
+# Puts the two apps most tests reach for on the device and keeps Shizuku
+# running. PCAPdroid records which hosts an app talks to, without root.
+# Shizuku gives apps the shell's privileges, which many system tools, app
+# managers and FPS meters ask for, and its server dies with every reboot of the
+# emulator, so it is started again whenever it is missing.
+#
+# The apps are installed once per AVD, and the marker sits inside the AVD, so a
+# new device gets them and removing one by hand keeps it removed.
+# TEST_TOOLS=false leaves both alone.
+APK=/defaults/apk
+MARKER="${ANDROID_AVD_HOME:-/config/.android/avd}/${AVD_NAME:-strawdroid}.avd/.strawdroid-test-tools"
+
+if [[ "${TEST_TOOLS,,}" != "true" ]]; then
+    echo "[svc-test-tools] TEST_TOOLS is off, Shizuku and PCAPdroid are not installed"
+    exec sleep infinity
+fi
+
+booted() {
+    [[ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r\n')" == "1" ]]
+}
+
+until booted; do
+    sleep 5
+done
+
+if [[ ! -f "${MARKER}" ]]; then
+    # A copy installed earlier from F-Droid carries another signature and is
+    # kept; adb's last line says so.
+    for app in shizuku pcapdroid; do
+        if out="$(adb install -r "${APK}/${app}.apk" 2>&1)"; then
+            echo "[svc-test-tools] ${app} installed"
+        else
+            echo "[svc-test-tools] ${app} did not install: ${out##*$'\n'}"
+        fi
+    done
+    touch "${MARKER}"
+fi
+
+while :; do
+    if booted && ! adb shell pidof shizuku_server >/dev/null 2>&1; then
+        dir="$(adb shell pm path moe.shizuku.privileged.api 2>/dev/null | tr -d '\r' | sed -n 's#^package:\(.*\)/base\.apk$#\1#p')"
+        if [[ -n "${dir}" ]] && adb shell "${dir}/lib/x86_64/libshizuku.so" >/dev/null 2>&1; then
+            echo "[svc-test-tools] Shizuku server started"
+        fi
+    fi
+    sleep 30
+done

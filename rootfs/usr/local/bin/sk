@@ -12,6 +12,9 @@ sk install <file.apk>     install an APK, replacing any earlier build of it
 sk list                   the APKs on the mounted share, newest first
 sk push <file|dir> [dest] copy files into the device's shared storage
 sk doze on|off            force the device into deep idle, or release it
+sk sms <number> <text>    an incoming SMS from that number
+sk call <number>          an incoming call from that number
+sk geo <lat> <lon>        put the device at that position
 sk shell [...]            a shell on the device, or one command on it
 
 Paths are taken relative to the share when they are not absolute, so
@@ -91,6 +94,25 @@ doze)
             ;;
         *) usage >&2; exit 2 ;;
     esac
+    ;;
+sms)
+    [ $# -ge 2 ] || { usage >&2; exit 2; }
+    require_device
+    number="$1"
+    shift
+    adb emu sms send "${number}" "$*"
+    ;;
+call)
+    [ $# -eq 1 ] || { usage >&2; exit 2; }
+    require_device
+    adb emu gsm call "$1"
+    ;;
+geo)
+    [ $# -eq 2 ] || { usage >&2; exit 2; }
+    require_device
+    # The console takes longitude first, the other way round from how a
+    # position is usually written.
+    adb emu geo fix "$2" "$1"
     ;;
 shell)
     require_device

@@ -19,12 +19,27 @@ done
 
 echo "[svc-emulator] starting ${AVD_NAME} on ${DISPLAY:-:1} (gpu=${EMULATOR_GPU})"
 
+# Without it the modem never connects on a Docker network, and Android has no
+# SIM; lib/numeric-addrconfig.c explains why. The launcher keeps what is in
+# LD_PRELOAD and adds its own, so Selkies' interposers stay in place.
+export LD_PRELOAD="/usr/local/lib/strawdroid/libnumeric-addrconfig.so${LD_PRELOAD:+:${LD_PRELOAD}}"
+
+# The emulator's own default number, 555-521-5554, is not a valid number to
+# libphonenumber, and SMS apps that check numbers hide such a contact.
+args=()
+if [[ -n "${EMULATOR_PHONE_NUMBER}" ]]; then
+    args+=(-phone-number "${EMULATOR_PHONE_NUMBER}")
+fi
+
+# Selkies runs PulseAudio for the desktop, so the emulator's sound reaches the
+# browser through it.
+if [[ "${EMULATOR_AUDIO,,}" != "true" ]]; then
+    args+=(-no-audio)
+fi
+
 # -no-snapshot-save: a saved snapshot would carry the last session's state,
 # half-open dialogs and earlier permissions included, into the next start, and
 # a test rig has to start clean.
-#
-# -no-audio: the container has no audio device, so asking for one only adds a
-# warning to every start.
 #
 # -no-metrics: without it a leftover crash record makes the emulator wait for
 # consent in a crash dialog ("Showing crashdialog to get consent"), and it never
@@ -35,8 +50,8 @@ exec s6-setuidgid abc \
     -gpu "${EMULATOR_GPU}" \
     -no-snapshot-save \
     -no-metrics \
-    -no-audio \
     -no-boot-anim \
-    -camera-back none \
-    -camera-front none \
+    -camera-back "${EMULATOR_CAMERA_BACK:-emulated}" \
+    -camera-front "${EMULATOR_CAMERA_FRONT:-emulated}" \
+    "${args[@]}" \
     ${EMULATOR_EXTRA_ARGS}
