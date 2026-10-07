@@ -97,6 +97,9 @@ A straw droid is a practice dummy shaped like an Android phone: built like the r
 - **The screen in a browser.** The desktop arrives over WebRTC, encoded on the box's own GPU, so scrolling and transitions look the way they will on a phone.
 - **Deploys like a phone on a cable.** `adb` reaches the device over the network, and Android Studio installs and debugs on it as on any other device.
 - **Android 16, API 36, `google_apis`, x86_64.** The newest level is also the strictest about background work. The image carries Play services and the real DocumentsUI, the folder picker an app asks for a folder with.
+- **A phone in full.** The SIM takes calls and SMS, and its number is one that SMS apps accept. Both cameras show the emulator's test scene, every sensor the image offers is on (heart rate and wrist tilt among them), Bluetooth is on, and the phone's sound plays in the browser tab.
+- **Tools for testing on board.** [Shizuku](https://github.com/RikkaApps/Shizuku) (Apache-2.0) is started again after every boot, for apps that need the shell's privileges, and [PCAPdroid](https://github.com/emanuele-f/PCAPdroid) (GPL-3.0) shows which hosts an app talks to. `TEST_TOOLS=false` keeps both off the device.
+- **Nothing lost on stop.** When the container stops, Android writes its files to disk first, so whatever a test did just before a `docker stop` is still there after the next start.
 - **APKs from a share.** A folder mounted at `/share` shows up on the device under `Download/share`, and the `sk` helper in the container's terminal installs from it.
 - **A device that stays.** `/config` holds the AVD with its apps, permissions and test data. On first boot it gets a wallpaper, dark mode, an empty home screen, the [Lawnchair](https://github.com/LawnchairLauncher/lawnchair) launcher (Apache-2.0) and the [Arcticons](https://github.com/Donnnno/Arcticons) line icons by Donnnno (GPL-3.0). Whatever you change afterwards stays as you set it.
 
@@ -139,10 +142,15 @@ sk list                    the APKs on the share, newest first
 sk install <name>.apk      install one, keeping the earlier build's data
 sk push <file|dir>         copy test files into the device's Downloads
 sk doze on | off           force deep idle, or release it
+sk sms <number> <text>     an incoming SMS from that number
+sk call <number>           an incoming call from that number
+sk geo <lat> <lon>         put the device at that position
 sk shell [...]             a shell on the device
 ```
 
 The device profile and the emulated RAM are read on the first boot only. To change them later, remove the AVD from `/config/.android/avd`.
+
+Cameras, sound, the phone number and the test tools take effect on every start: `EMULATOR_CAMERA_BACK` and `EMULATOR_CAMERA_FRONT` (`emulated` or `none`), `EMULATOR_AUDIO` and `TEST_TOOLS` (`true` or `false`), and `EMULATOR_PHONE_NUMBER`. The Unraid template explains each one.
 
 <br>
 
