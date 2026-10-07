@@ -17,32 +17,46 @@ if [[ "${TEST_TOOLS,,}" != "true" ]]; then
     exec sleep infinity
 fi
 
+declare -A PACKAGES=([shizuku]=moe.shizuku.privileged.api [pcapdroid]=com.emanuelef.remote_capture)
+
 booted() {
     [[ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r\n')" == "1" ]]
 }
 
-until booted; do
-    sleep 5
+# On a fresh AVD svc-branding restarts adbd and then the framework, and an
+# install that runs at the same time fails with the device offline.
+for _ in $(seq 1 300); do
+    [[ -f /run/strawdroid-branding-done ]] && break
+    sleep 2
 done
 
-if [[ ! -f "${MARKER}" ]]; then
-    # A copy installed earlier from F-Droid carries another signature and is
-    # kept; adb's last line says so.
-    for app in shizuku pcapdroid; do
-        if out="$(adb install -r "${APK}/${app}.apk" 2>&1)"; then
-            echo "[svc-test-tools] ${app} installed"
-        else
-            echo "[svc-test-tools] ${app} did not install: ${out##*$'\n'}"
-        fi
-    done
-    touch "${MARKER}"
-fi
-
+attempts=0
 while :; do
-    if booted && ! adb shell pidof shizuku_server >/dev/null 2>&1; then
-        dir="$(adb shell pm path moe.shizuku.privileged.api 2>/dev/null | tr -d '\r' | sed -n 's#^package:\(.*\)/base\.apk$#\1#p')"
-        if [[ -n "${dir}" ]] && adb shell "${dir}/lib/x86_64/libshizuku.so" >/dev/null 2>&1; then
-            echo "[svc-test-tools] Shizuku server started"
+    if booted; then
+        # An app that is already there stays as it is, so a copy from F-Droid,
+        # signed differently, is not fought over.
+        if [[ ! -f "${MARKER}" ]]; then
+            missing=0
+            for app in shizuku pcapdroid; do
+                adb shell pm path "${PACKAGES[${app}]}" >/dev/null 2>&1 && continue
+                if out="$(adb install -r "${APK}/${app}.apk" 2>&1)"; then
+                    echo "[svc-test-tools] ${app} installed"
+                else
+                    echo "[svc-test-tools] ${app} did not install: ${out##*$'\n'}"
+                    missing=1
+                fi
+            done
+            attempts=$((attempts + 1))
+            if [[ "${missing}" -eq 0 || "${attempts}" -ge 5 ]]; then
+                touch "${MARKER}"
+            fi
+        fi
+
+        if ! adb shell pidof shizuku_server >/dev/null 2>&1; then
+            dir="$(adb shell pm path "${PACKAGES[shizuku]}" 2>/dev/null | tr -d '\r' | sed -n 's#^package:\(.*\)/base\.apk$#\1#p')"
+            if [[ -n "${dir}" ]] && adb shell "${dir}/lib/x86_64/libshizuku.so" >/dev/null 2>&1; then
+                echo "[svc-test-tools] Shizuku server started"
+            fi
         fi
     fi
     sleep 30
