@@ -22,6 +22,16 @@ cp -af /defaults/autostart "${CONFIG_HOME}/openbox/autostart"
 chmod 0755 "${CONFIG_HOME}/openbox/autostart"
 log "autostart synced from /defaults/autostart"
 
+# Flutter apps make the emulator's renderer reserve tens of terabytes of address
+# space, of which it uses a few gigabytes. In the kernel's default overcommit
+# mode a single reservation larger than RAM plus swap is refused, the emulator
+# dies and Android reboots as soon as such an app draws. The setting belongs to
+# the host and cannot be changed from inside a container.
+if [ "$(cat /proc/sys/vm/overcommit_memory 2>/dev/null)" = "0" ]; then
+    log "WARNING: vm.overcommit_memory is 0 on this host, so Flutter apps will crash the emulator."
+    log "WARNING: on the host, sysctl -w vm.overcommit_memory=1 fixes it; see the README."
+fi
+
 # Without KVM the emulator refuses to start or crawls, and from outside either
 # looks like a broken container, so the missing device is named here.
 if [ -c /dev/kvm ] && [ -r /dev/kvm ] && [ -w /dev/kvm ]; then
