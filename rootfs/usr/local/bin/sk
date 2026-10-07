@@ -5,20 +5,37 @@
 set -euo pipefail
 
 SHARE="${SK_SHARE:-/share}"
+# The share is read-only, so screenshots, recordings and captures go here.
+OUT="${SK_OUT:-/config/captures}"
+SEED=/defaults/seed
+PCAPDROID=com.emanuelef.remote_capture
+NETLOG=strawdroid-netlog.pcap
 
 usage() {
     cat <<'EOF'
 sk install <file.apk>     install an APK, replacing any earlier build of it
 sk list                   the APKs on the mounted share, newest first
 sk push <file|dir> [dest] copy files into the device's shared storage
+sk seed                   test contacts, photos with GPS, music with BPM tags,
+                          a video and documents on the device
 sk doze on|off            force the device into deep idle, or release it
 sk sms <number> <text>    an incoming SMS from that number
 sk call <number>          an incoming call from that number
 sk geo <lat> <lon>        put the device at that position
+sk lang <tag>             switch the system language, e.g. de-AT or en-US
+sk dark on|off            dark or light theme
+sk snap save|load|rm <name>
+sk snap list              save the whole device and return to it in seconds
+sk reset                  load the snapshot called "clean"
+sk netlog start <package> record which hosts an app talks to
+sk netlog stop            stop and list them
+sk shot [name]            a screenshot
+sk record [seconds]       a screen recording, 30 seconds unless given
 sk shell [...]            a shell on the device, or one command on it
 
 Paths are taken relative to the share when they are not absolute, so
-"sk install arrowloop.apk" finds /share/arrowloop.apk.
+"sk install arrowloop.apk" finds /share/arrowloop.apk. Screenshots,
+recordings and network logs are saved under /config/captures.
 EOF
 }
 
@@ -30,11 +47,77 @@ resolve() {
     esac
 }
 
+booted() {
+    [ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r\n')" = "1" ]
+}
+
 require_device() {
-    if [ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r\n')" != "1" ]; then
+    if ! booted; then
         echo "The device is not up yet. It takes about a minute from a cold start." >&2
         exit 1
     fi
+}
+
+wait_for_boot() {
+    for _ in $(seq 1 120); do
+        booted && return 0
+        sleep 2
+    done
+    echo "The device did not come back up." >&2
+    exit 1
+}
+
+# Until the media scanner sees a file, the picker and the gallery do not show it.
+scan() {
+    adb shell am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE \
+        -d "file://$1" >/dev/null 2>&1 || true
+}
+
+# PCAPdroid asks before anyone else may start or stop a capture, and Android
+# asks once before any app may run a VPN. Both dialogs are confirmed here.
+confirm_capture() {
+    local tapped=0 bounds x1 y1 x2 y2
+    for _ in $(seq 1 10); do
+        sleep 1
+        bounds="$(adb exec-out uiautomator dump /dev/tty 2>/dev/null \
+            | grep -oE 'resource-id="(com\.emanuelef\.remote_capture:id/allow_btn|android:id/button1)"[^>]*bounds="\[[0-9]+,[0-9]+\]\[[0-9]+,[0-9]+\]"' \
+            | grep -oE '\[[0-9]+,[0-9]+\]\[[0-9]+,[0-9]+\]' | head -n 1)" || true
+        if [ -z "${bounds}" ]; then
+            [ "${tapped}" -eq 1 ] && return 0
+            continue
+        fi
+        read -r x1 y1 x2 y2 <<<"$(tr '[],' '   ' <<<"${bounds}")"
+        adb shell input tap $(((x1 + x2) / 2)) $(((y1 + y2) / 2))
+        tapped=1
+    done
+}
+
+put() {
+    local dir="/sdcard/$1/StrawDroid" f
+    shift
+    adb shell mkdir -p "${dir}"
+    for f in "$@"; do
+        adb push "${f}" "${dir}/" >/dev/null 2>&1
+        scan "${dir}/$(basename "${f}")"
+    done
+}
+
+contact() {
+    local name="$1" phone="$2" email="$3" id
+    if adb shell content query --uri content://com.android.contacts/contacts \
+        --projection display_name 2>/dev/null | grep -q "display_name=${name}\$"; then
+        return 0
+    fi
+    adb shell content insert --uri content://com.android.contacts/raw_contacts \
+        --bind account_type:n: --bind account_name:n:
+    id="$(adb shell content query --uri content://com.android.contacts/raw_contacts \
+        --projection _id --sort "'_id DESC'" | head -n 1 | sed -n 's/.*_id=\([0-9]*\).*/\1/p')"
+    adb shell content insert --uri content://com.android.contacts/data --bind "raw_contact_id:i:${id}" \
+        --bind mimetype:s:vnd.android.cursor.item/name --bind "data1:s:'${name}'"
+    adb shell content insert --uri content://com.android.contacts/data --bind "raw_contact_id:i:${id}" \
+        --bind mimetype:s:vnd.android.cursor.item/phone_v2 --bind "data1:s:${phone}" --bind data2:i:2
+    adb shell content insert --uri content://com.android.contacts/data --bind "raw_contact_id:i:${id}" \
+        --bind mimetype:s:vnd.android.cursor.item/email_v2 --bind "data1:s:${email}" --bind data2:i:1
 }
 
 cmd="${1:-}"
@@ -73,10 +156,22 @@ push)
     [ -e "${src}" ] || { echo "No such file or folder: ${src}" >&2; exit 1; }
     require_device
     adb push "${src}" "${dest}"
-    # Until the media scanner sees a file, the picker does not show it.
-    adb shell am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE \
-        -d "file://${dest}" >/dev/null 2>&1 || true
+    scan "${dest}"
     echo "Pushed to ${dest}"
+    ;;
+seed)
+    require_device
+    put Pictures "${SEED}"/photo-*.jpg
+    put Music "${SEED}"/click-*.mp3
+    put Movies "${SEED}"/test-pattern.mp4
+    put Documents "${SEED}"/test-document.pdf "${SEED}"/test-note.txt "${SEED}"/test-table.csv
+    # 555-0100 to 555-0199 are set aside for fiction, so these reach nobody.
+    contact "Anna Gruber" "+12015550101" "anna.gruber@example.org"
+    contact "Bernd Müller" "+12015550102" "bernd.mueller@example.org"
+    contact "Chiara Rossi" "+12015550103" "chiara.rossi@example.org"
+    echo "Seeded: 3 contacts, 3 photos with GPS (Pictures/StrawDroid), 3 click tracks at"
+    echo "90, 120 and 172 BPM (Music/StrawDroid), a video (Movies/StrawDroid), and a PDF,"
+    echo "a text file and a CSV (Documents/StrawDroid)."
     ;;
 doze)
     require_device
@@ -113,6 +208,104 @@ geo)
     # The console takes longitude first, the other way round from how a
     # position is usually written.
     adb emu geo fix "$2" "$1"
+    ;;
+lang)
+    [ $# -eq 1 ] || { usage >&2; exit 2; }
+    require_device
+    # Android 16 has no shell command for the system language. The property is
+    # read when the framework starts, so it is restarted, which takes about
+    # twenty seconds.
+    adb root >/dev/null
+    adb wait-for-device
+    adb shell setprop persist.sys.locale "$1"
+    # The flag stays set through a framework restart, and the wait below would
+    # pass at once. system_server sets it again when it is ready.
+    adb shell setprop sys.boot_completed 0
+    adb shell stop
+    adb shell start
+    wait_for_boot
+    echo "The system language is $(adb shell getprop persist.sys.locale | tr -d '\r')."
+    ;;
+dark)
+    require_device
+    case "${1:-}" in
+        on) adb shell cmd uimode night yes ;;
+        off) adb shell cmd uimode night no ;;
+        *) usage >&2; exit 2 ;;
+    esac
+    ;;
+snap)
+    case "${1:-}" in
+        list) adb emu avd snapshot list ;;
+        save|load|rm)
+            [ $# -eq 2 ] || { usage >&2; exit 2; }
+            action="$1"
+            [ "${action}" = rm ] && action=delete
+            adb emu avd snapshot "${action}" "$2"
+            if [ "${action}" = load ]; then
+                # adb loses the device while the snapshot is restored.
+                adb reconnect offline >/dev/null 2>&1 || true
+                adb wait-for-device
+            fi
+            ;;
+        *) usage >&2; exit 2 ;;
+    esac
+    ;;
+reset)
+    if ! adb emu avd snapshot list 2>/dev/null | grep -qw clean; then
+        echo 'There is no snapshot called "clean". Set the device up, then run: sk snap save clean' >&2
+        exit 1
+    fi
+    adb emu avd snapshot load clean
+    adb reconnect offline >/dev/null 2>&1 || true
+    adb wait-for-device
+    ;;
+netlog)
+    require_device
+    if ! adb shell pm path "${PCAPDROID}" >/dev/null 2>&1; then
+        echo "PCAPdroid is not installed. It comes with TEST_TOOLS=true." >&2
+        exit 1
+    fi
+    case "${1:-}" in
+        start)
+            [ $# -eq 2 ] || { usage >&2; exit 2; }
+            adb shell rm -f "/sdcard/Download/PCAPdroid/${NETLOG}"
+            adb shell am start -e action start -e pcap_dump_mode pcap_file \
+                -e pcap_name "${NETLOG}" -e app_filter "$2" \
+                -n "${PCAPDROID}/.activities.CaptureCtrl" >/dev/null
+            confirm_capture
+            echo "Recording $2. Use the app, then run: sk netlog stop"
+            ;;
+        stop)
+            adb shell am start -e action stop \
+                -n "${PCAPDROID}/.activities.CaptureCtrl" >/dev/null
+            confirm_capture
+            mkdir -p "${OUT}"
+            file="${OUT}/netlog-$(date +%Y%m%d-%H%M%S).pcap"
+            adb pull "/sdcard/Download/PCAPdroid/${NETLOG}" "${file}" >/dev/null 2>&1
+            python3 /usr/local/lib/strawdroid/pcap-hosts.py "${file}"
+            echo "Capture saved as ${file}"
+            ;;
+        *) usage >&2; exit 2 ;;
+    esac
+    ;;
+shot)
+    require_device
+    mkdir -p "${OUT}"
+    file="${OUT}/${1:-shot-$(date +%Y%m%d-%H%M%S)}.png"
+    adb exec-out screencap -p >"${file}"
+    echo "Saved ${file}"
+    ;;
+record)
+    require_device
+    seconds="${1:-30}"
+    mkdir -p "${OUT}"
+    file="${OUT}/record-$(date +%Y%m%d-%H%M%S).mp4"
+    echo "Recording ${seconds} seconds..."
+    adb shell screenrecord --time-limit "${seconds}" /sdcard/strawdroid-record.mp4
+    adb pull /sdcard/strawdroid-record.mp4 "${file}" >/dev/null 2>&1
+    adb shell rm -f /sdcard/strawdroid-record.mp4
+    echo "Saved ${file}"
     ;;
 shell)
     require_device
