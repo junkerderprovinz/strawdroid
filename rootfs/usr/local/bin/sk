@@ -283,6 +283,12 @@ netlog)
             mkdir -p "${OUT}"
             file="${OUT}/netlog-$(date +%Y%m%d-%H%M%S).pcap"
             adb pull "/sdcard/Download/PCAPdroid/${NETLOG}" "${file}" >/dev/null 2>&1
+            # PCAPdroid writes the pcap header only with the first packet.
+            if [ ! -s "${file}" ]; then
+                rm -f "${file}"
+                echo "Nothing recorded: the app sent and received no packets."
+                exit 0
+            fi
             python3 /usr/local/lib/strawdroid/pcap-hosts.py "${file}"
             echo "Capture saved as ${file}"
             ;;
