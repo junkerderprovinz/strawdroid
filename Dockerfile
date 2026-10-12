@@ -243,10 +243,11 @@ ENV EMULATOR_GPU=swiftshader_indirect \
     EMULATOR_RAM=2048 \
     EMULATOR_EXTRA_ARGS=""
 
-# Everything a phone has that the emulator can fake is on by default: both
-# cameras show the emulator's test scene, sound goes to the browser, and the
-# SIM has a number SMS apps accept (libphonenumber's own US example).
-ENV EMULATOR_CAMERA_BACK=emulated \
+# Everything a phone has that the emulator can fake is on by default: the back
+# camera shows a QR code that `sk camera` swaps, the front camera the
+# emulator's test scene, sound goes to the browser, and the SIM has a number
+# SMS apps accept (libphonenumber's own US example).
+ENV EMULATOR_CAMERA_BACK=picture \
     EMULATOR_CAMERA_FRONT=emulated \
     EMULATOR_AUDIO=true \
     EMULATOR_PHONE_NUMBER=12015550123 \

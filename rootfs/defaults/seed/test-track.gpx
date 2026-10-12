@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="StrawDroid" xmlns="http://www.topografix.com/GPX/1/1">
+  <trk>
+    <name>Graz, Schlossberg loop</name>
+    <trkseg>
+      <trkpt lat="47.07087" lon="15.43828"><ele>353</ele><time>2026-01-10T09:00:00Z</time></trkpt>
+      <trkpt lat="47.07260" lon="15.43770"><ele>362</ele><time>2026-01-10T09:03:00Z</time></trkpt>
+      <trkpt lat="47.07531" lon="15.43740"><ele>410</ele><time>2026-01-10T09:09:00Z</time></trkpt>
+      <trkpt lat="47.07651" lon="15.43910"><ele>470</ele><time>2026-01-10T09:15:00Z</time></trkpt>
+      <trkpt lat="47.07490" lon="15.44120"><ele>420</ele><time>2026-01-10T09:21:00Z</time></trkpt>
+      <trkpt lat="47.07220" lon="15.44030"><ele>365</ele><time>2026-01-10T09:27:00Z</time></trkpt>
+      <trkpt lat="47.07087" lon="15.43828"><ele>353</ele><time>2026-01-10T09:32:00Z</time></trkpt>
+    </trkseg>
+  </trk>
+</gpx>

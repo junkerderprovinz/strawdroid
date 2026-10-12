@@ -8,6 +8,9 @@ SHARE="${SK_SHARE:-/share}"
 # The share is read-only, so screenshots, recordings and captures go here.
 OUT="${SK_OUT:-/config/captures}"
 SEED=/defaults/seed
+# svc-emulator starts the emulator with this file as the back camera's picture
+# and the emulator reads it again each time an app opens the camera.
+CAMERA=/config/camera/back.png
 PCAPDROID=com.emanuelef.remote_capture
 NETLOG=strawdroid-netlog.pcap
 
@@ -17,11 +20,18 @@ sk install <file.apk>     install an APK, replacing any earlier build of it
 sk list                   the APKs on the mounted share, newest first
 sk push <file|dir> [dest] copy files into the device's shared storage
 sk seed                   test contacts, photos with GPS, music with BPM tags,
-                          a video and documents on the device
+                          a video, documents, a score, a song, a GPS track, a
+                          calendar event and barcode pictures on the device
+sk camera <code|file>     what the back camera sees: qr-text, qr-url, qr-wifi,
+                          qr-otp, qr-contact, ean13, code128 or a picture
 sk doze on|off            force the device into deep idle, or release it
 sk sms <number> <text>    an incoming SMS from that number
 sk call <number>          an incoming call from that number
 sk geo <lat> <lon>        put the device at that position
+sk sensor [name values]   list the sensors, or set one, e.g. pressure 950
+sk home pixel|lawnchair   the home screen app; widgets show only on pixel
+sk expose <port>          reach a port the device listens on from the network
+sk expose off <port>      stop that
 sk lang <tag>             switch the system language, e.g. de-AT or en-US
 sk dark on|off            dark or light theme
 sk snap save|load|rm <name>
@@ -164,14 +174,30 @@ seed)
     put Pictures "${SEED}"/photo-*.jpg
     put Music "${SEED}"/click-*.mp3
     put Movies "${SEED}"/test-pattern.mp4
-    put Documents "${SEED}"/test-document.pdf "${SEED}"/test-note.txt "${SEED}"/test-table.csv
+    put Documents "${SEED}"/test-document.pdf "${SEED}"/test-note.txt "${SEED}"/test-table.csv \
+        "${SEED}"/test-score.musicxml "${SEED}"/test-song.cho "${SEED}"/test-track.gpx "${SEED}"/test-event.ics
+    put Pictures "${SEED}"/codes/*.png
     # 555-0100 to 555-0199 are set aside for fiction, so these reach nobody.
     contact "Anna Gruber" "+12015550101" "anna.gruber@example.org"
     contact "Bernd Müller" "+12015550102" "bernd.mueller@example.org"
     contact "Chiara Rossi" "+12015550103" "chiara.rossi@example.org"
     echo "Seeded: 3 contacts, 3 photos with GPS (Pictures/StrawDroid), 3 click tracks at"
-    echo "90, 120 and 172 BPM (Music/StrawDroid), a video (Movies/StrawDroid), and a PDF,"
-    echo "a text file and a CSV (Documents/StrawDroid)."
+    echo "90, 120 and 172 BPM (Music/StrawDroid), a video (Movies/StrawDroid), a PDF, a"
+    echo "text file, a CSV, a MusicXML score, a ChordPro song, a GPX track and a calendar"
+    echo "event (Documents/StrawDroid), and QR codes and barcodes (Pictures/StrawDroid)."
+    ;;
+camera)
+    [ $# -eq 1 ] || { usage >&2; exit 2; }
+    if [ -f "${SEED}/codes/$1.png" ]; then
+        picture="${SEED}/codes/$1.png"
+    else
+        picture="$(resolve "$1")"
+    fi
+    [ -f "${picture}" ] || { echo "No code called $1 and no such file: ${picture}" >&2; exit 1; }
+    mkdir -p "$(dirname "${CAMERA}")"
+    cp "${picture}" "${CAMERA}"
+    echo "The back camera shows $(basename "${picture}") the next time an app opens it."
+    echo "Through the camera only QR codes are read; import a barcode picture instead."
     ;;
 doze)
     require_device
@@ -208,6 +234,49 @@ geo)
     # The console takes longitude first, the other way round from how a
     # position is usually written.
     adb emu geo fix "$2" "$1"
+    ;;
+sensor)
+    require_device
+    if [ $# -eq 0 ]; then
+        adb emu sensor status | grep -v '^OK'
+        exit 0
+    fi
+    [ $# -ge 2 ] || { usage >&2; exit 2; }
+    name="$1"
+    shift
+    # The console wants several values joined by colons, e.g. acceleration 0:9.8:0.
+    adb emu sensor set "${name}" "$(IFS=:; echo "$*")" | grep -v '^OK' || true
+    adb emu sensor get "${name}" | grep -v '^OK'
+    ;;
+home)
+    require_device
+    case "${1:-}" in
+        pixel) launcher=com.google.android.apps.nexuslauncher/.NexusLauncherActivity ;;
+        lawnchair) launcher=app.lawnchair/.LawnchairLauncher ;;
+        *) usage >&2; exit 2 ;;
+    esac
+    adb shell cmd package set-home-activity "${launcher}" >/dev/null
+    adb shell input keyevent KEYCODE_HOME
+    echo "The home screen is ${1} now."
+    ;;
+expose)
+    require_device
+    if [ "${1:-}" = off ]; then
+        [ $# -eq 2 ] || { usage >&2; exit 2; }
+        pkill -f "socat TCP-LISTEN:$2," || true
+        adb emu redir del "tcp:$2" >/dev/null 2>&1 || true
+        echo "Port $2 is closed again."
+        exit 0
+    fi
+    [ $# -eq 1 ] || { usage >&2; exit 2; }
+    port="$1"
+    address="$(hostname -i | cut -d' ' -f1)"
+    # The emulator forwards only on the loopback address, so socat carries the
+    # port to the container's own address, where other devices can reach it.
+    adb emu redir add "tcp:${port}:${port}" >/dev/null
+    setsid nohup socat "TCP-LISTEN:${port},fork,reuseaddr,bind=${address}" "TCP:127.0.0.1:${port}" \
+        >/dev/null 2>&1 &
+    echo "Port ${port} on the device is reachable at ${address}:${port}."
     ;;
 lang)
     [ $# -eq 1 ] || { usage >&2; exit 2; }

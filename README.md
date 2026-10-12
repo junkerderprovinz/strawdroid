@@ -148,8 +148,13 @@ sk doze on | off           force deep idle, or release it
 sk sms <number> <text>     an incoming SMS from that number
 sk call <number>           an incoming call from that number
 sk geo <lat> <lon>         put the device at that position
+sk sensor pressure 950     set a sensor, or list them without arguments
 sk seed                    test contacts, photos with GPS, music with BPM tags,
-                           a video and documents on the device
+                           a video, documents, a score, a song, a GPS track, a
+                           calendar event and barcode pictures on the device
+sk camera qr-otp           what the back camera sees: a QR code or a picture
+sk home pixel | lawnchair  the home screen app; widgets show only on pixel
+sk expose <port>           reach a port the device listens on from the network
 sk lang de-AT              switch the system language
 sk dark on | off           dark or light theme
 sk snap save <name>        save the whole device, and load, rm or list snapshots
@@ -164,7 +169,7 @@ Screenshots, recordings and network captures land in `/config/captures`. A snaps
 
 The device profile and the emulated RAM are read on the first boot only. To change them later, remove the AVD from `/config/.android/avd`.
 
-Cameras, sound, the phone number and the test tools take effect on every start: `EMULATOR_CAMERA_BACK` and `EMULATOR_CAMERA_FRONT` (`emulated` or `none`), `EMULATOR_AUDIO`, `TEST_TOOLS` and `ROOT` (`true` or `false`), and `EMULATOR_PHONE_NUMBER`. The Unraid template explains each one.
+Cameras, sound, the phone number and the test tools take effect on every start: `EMULATOR_CAMERA_BACK` (`picture`, `emulated` or `none`) and `EMULATOR_CAMERA_FRONT` (`emulated` or `none`), `EMULATOR_AUDIO`, `TEST_TOOLS` and `ROOT` (`true` or `false`), and `EMULATOR_PHONE_NUMBER`. The Unraid template explains each one.
 
 <br>
 

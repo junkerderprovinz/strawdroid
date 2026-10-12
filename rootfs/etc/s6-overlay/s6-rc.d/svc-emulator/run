@@ -43,6 +43,17 @@ if [[ "${EMULATOR_AUDIO,,}" != "true" ]]; then
     args+=(-no-audio)
 fi
 
+# The back camera shows a picture that `sk camera` swaps, a QR code to begin
+# with, so scanning apps can be tested. The emulator reads the file again each
+# time an app opens the camera.
+camera_back="${EMULATOR_CAMERA_BACK:-picture}"
+if [[ "${camera_back}" == picture ]]; then
+    mkdir -p /config/camera
+    [[ -f /config/camera/back.png ]] || cp /defaults/seed/codes/qr-url.png /config/camera/back.png
+    chown -R abc:abc /config/camera
+    camera_back=imagefile:/config/camera/back.png
+fi
+
 # -no-snapshot-save: a saved snapshot would carry the last session's state,
 # half-open dialogs and earlier permissions included, into the next start, and
 # a test rig has to start clean.
@@ -57,7 +68,7 @@ exec s6-setuidgid abc \
     -no-snapshot-save \
     -no-metrics \
     -no-boot-anim \
-    -camera-back "${EMULATOR_CAMERA_BACK:-emulated}" \
+    -camera-back "${camera_back}" \
     -camera-front "${EMULATOR_CAMERA_FRONT:-emulated}" \
     "${args[@]}" \
     ${EMULATOR_EXTRA_ARGS}
