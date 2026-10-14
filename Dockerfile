@@ -235,10 +235,9 @@ ENV KEYBOARD_LAYOUT=us \
 # The `sk` helper looks here for an APK given by bare name.
 ENV SK_SHARE=/share
 
-# swiftshader_indirect works everywhere, even with no GPU wired in. `host` is
-# faster and shows how an app really scrolls, but needs the nvidia runtime and
-# /dev/dri; set it from the template once the GPU is confirmed.
-ENV EMULATOR_GPU=swiftshader_indirect \
+# auto draws on whichever GPU is wired in and falls back to SwiftShader on the
+# CPU without one; svc-emulator decides.
+ENV EMULATOR_GPU=auto \
     EMULATOR_DEVICE=pixel_6 \
     EMULATOR_RAM=2048 \
     EMULATOR_EXTRA_ARGS=""

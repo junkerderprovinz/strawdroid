@@ -71,6 +71,7 @@ demand.</p>
   <li><strong><code>/dev/kvm</code> on the host</strong>, passed in via Extra Parameters (<code>--device=/dev/kvm</code>). On bare metal it is simply there; inside a VM it needs nested virtualisation. Without it the emulator does not start, and the container log says so in as many words</li>
   <li><strong>Memory</strong>: an emulator is a virtual machine and holds its memory whether anybody is testing or not. Measured idle, with no app installed, about 6 GB. The template caps it at 8 GB and four cores</li>
   <li><strong>For Flutter apps</strong>, <code>vm.overcommit_memory=1</code> on the host. Without it the emulator crashes as soon as one draws. Add <code>sysctl vm.overcommit_memory=1</code> to <code>/boot/config/go</code> to keep it after a reboot; the container log warns while it is missing</li>
+  <li><strong>A graphics card, for speed.</strong> Without one the emulator draws on the CPU and taps lag behind. Intel or AMD: add <code>--device=/dev/dri</code> to Extra Parameters. NVIDIA: add <code>--runtime=nvidia</code> and set <code>NVIDIA_VISIBLE_DEVICES</code> to <code>all</code> (needs the Nvidia Driver plugin). The <code>Drawn:</code> line at the end of the log names the renderer; SwiftShader or llvmpipe there means the CPU</li>
   <li>amd64 only. The system image is x86_64, so there is nothing for an arm64 build to run</li>
   <li>It is deliberately <strong>not</strong> set to restart on its own. Start it when it is needed and stop it after</li>
 </ul>
@@ -82,6 +83,7 @@ demand.</p>
   <li>Image tag (<code>latest</code> or a pinned <code>vX.Y.Z</code>)</li>
   <li>Output of <code>docker logs --tail 200 StrawDroid</code></li>
   <li>Whether <code>/dev/kvm</code> is present on the host: <code>ls -l /dev/kvm</code></li>
+  <li>Which graphics card you passed in, if any</li>
   <li>Whether you changed <code>EMULATOR_GPU</code>, <code>EMULATOR_DEVICE</code>, <code>EMULATOR_RAM</code> or the <code>/config</code> mount</li>
 </ul>
 <p>GitHub issues with the same information are just as welcome:

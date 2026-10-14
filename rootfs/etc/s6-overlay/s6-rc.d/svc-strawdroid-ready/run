@@ -45,6 +45,8 @@ if [[ "${booted}" -eq 1 ]]; then
     release="$(adb shell getprop ro.build.version.release 2>/dev/null | tr -d '\r\n')"
     sdk="$(adb shell getprop ro.build.version.sdk 2>/dev/null | tr -d '\r\n')"
     [[ -n "${sdk}" ]] && release="${release} (API ${sdk})"
+    # SwiftShader or llvmpipe here means the CPU, whatever EMULATOR_GPU says.
+    renderer="$(adb shell dumpsys SurfaceFlinger 2>/dev/null | sed -n 's/^GLES: //p' | head -n1 | tr -d '\r')"
 fi
 
 own_ip="$(ip -4 route get 1.1.1.1 2>/dev/null | awk '{for(i=1;i<NF;i++) if($i=="src") print $(i+1); exit}')"
@@ -61,6 +63,7 @@ if [[ "${web}" -eq 1 && "${booted}" -eq 1 ]]; then
     echo "    Screen:  https://${own_ip}:${CUSTOM_HTTPS_PORT:-3001}/"
     echo "    Deploy:  adb connect ${own_ip}:${ADB_DEVICE_PORT:-5555}"
     echo "    Doze:    adb -s ${own_ip}:${ADB_DEVICE_PORT:-5555} shell dumpsys deviceidle force-idle"
+    [[ -n "${renderer}" ]] && echo "    Drawn:   ${renderer}"
 elif [[ "${web}" -eq 1 ]]; then
     # A phone that never booted almost always means a missing /dev/kvm.
     echo -e "  ${RED}✗ STRAWDROID IS NOT READY${NC} - the desktop serves but Android never finished booting"

@@ -13,6 +13,11 @@ services:
     # Without KVM the emulator does not start, and the container log says so.
     devices:
       - /dev/kvm
+      # Intel or AMD graphics: the emulator draws on the GPU instead of the CPU.
+      # - /dev/dri
+    # NVIDIA instead needs the nvidia container toolkit and these two:
+    # runtime: nvidia
+    # and NVIDIA_VISIBLE_DEVICES: "all" under environment.
 
     # PUID and PGID must match the owner of ./config on the host, or the
     # emulator cannot write into its AVD and reports "A snapshot operation is
@@ -24,9 +29,8 @@ services:
       PUID: "99"
       PGID: "100"
       TZ: "Europe/Vienna"
-      # swiftshader_indirect works everywhere, including with no GPU wired in.
-      # "host" is faster and needs the nvidia runtime plus /dev/dri.
-      EMULATOR_GPU: "swiftshader_indirect"
+      # auto uses a GPU when one is wired in (see below) and the CPU otherwise.
+      EMULATOR_GPU: "auto"
       EMULATOR_DEVICE: "pixel_6"
       EMULATOR_RAM: "2048"
 

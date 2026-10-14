@@ -17,7 +17,30 @@ for _ in $(seq 1 120); do
     sleep 1
 done
 
-echo "[svc-emulator] starting ${AVD_NAME} on ${DISPLAY:-:1} (gpu=${EMULATOR_GPU})"
+# NVIDIA arrives through the nvidia runtime, Intel and AMD through /dev/dri.
+gpu="${EMULATOR_GPU:-auto}"
+nvidia=false
+if which nvidia-smi >/dev/null 2>&1 && ls -A /dev/dri >/dev/null 2>&1; then
+    nvidia=true
+fi
+if [[ "${gpu}" == auto ]]; then
+    if [[ "${nvidia}" == true ]] || compgen -G "/dev/dri/renderD*" >/dev/null; then
+        gpu=host
+    else
+        gpu=swiftshader_indirect
+    fi
+fi
+
+# The variables startwm.sh exports for the desktop, which this service does not
+# inherit. With them the emulator gets NVIDIA's own OpenGL rather than Mesa's
+# zink layered over the Vulkan driver. Intel and AMD get DRI3 from Xvfb.
+if [[ "${gpu}" == host && "${nvidia}" == true && "${DISABLE_ZINK,,}" == false ]]; then
+    export LIBGL_KOPPER_DRI2=1
+    export MESA_LOADER_DRIVER_OVERRIDE=zink
+    export GALLIUM_DRIVER=zink
+fi
+
+echo "[svc-emulator] starting ${AVD_NAME} on ${DISPLAY:-:1} (gpu=${gpu}, EMULATOR_GPU=${EMULATOR_GPU:-auto})"
 
 # Without it the modem never connects on a Docker network, and Android has no
 # SIM; lib/numeric-addrconfig.c explains why. The launcher keeps what is in
@@ -64,7 +87,7 @@ fi
 exec s6-setuidgid abc \
     "${ANDROID_SDK_ROOT}/emulator/emulator" \
     -avd "${AVD_NAME}" \
-    -gpu "${EMULATOR_GPU}" \
+    -gpu "${gpu}" \
     -no-snapshot-save \
     -no-metrics \
     -no-boot-anim \
