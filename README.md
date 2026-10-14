@@ -97,7 +97,7 @@ A straw droid is a practice dummy shaped like an Android phone: built like the r
 - **The screen in a browser.** The desktop arrives over WebRTC, encoded on the box's own GPU, so scrolling and transitions look the way they will on a phone.
 - **Deploys like a phone on a cable.** `adb` reaches the device over the network, and Android Studio installs and debugs on it as on any other device.
 - **Android 16, API 36, `google_apis`, x86_64.** The newest level is also the strictest about background work. The image carries Play services and the real DocumentsUI, the folder picker an app asks for a folder with. For faults that only show on an older level, Android 14 (API 34) is published as well, under the `latest-api34` tag.
-- **A phone in full.** The SIM takes calls and SMS, and its number is one that SMS apps accept. Both cameras show the emulator's test scene, every sensor the image offers is on (heart rate and wrist tilt among them), Bluetooth is on, and the phone's sound plays in the browser tab.
+- **A phone in full.** The SIM takes calls and SMS, and its number is one that SMS apps accept. Both cameras show the emulator's test scene, every sensor the image offers is on (heart rate and wrist tilt among them), Bluetooth is on, and the phone's sound plays in the browser tab. The microphone hears a sound file played with `sk mic`, or your own voice once the microphone is switched on in the Selkies sidebar.
 - **Tools for testing on board.** [Shizuku](https://github.com/RikkaApps/Shizuku) (Apache-2.0) is started again after every boot, for apps that need the shell's privileges, and [PCAPdroid](https://github.com/emanuele-f/PCAPdroid) (GPL-3.0) shows which hosts an app talks to. `TEST_TOOLS=false` keeps both off the device.
 - **Root when a test needs it.** `ROOT=true` gives apps root through `su`, for testing an app's root mode. SELinux is permissive then, unlike on most rooted phones, so it stays off unless a test asks for it.
 - **Nothing lost on stop.** When the container stops, Android writes its files to disk first, so whatever a test did just before a `docker stop` is still there after the next start.
@@ -159,6 +159,9 @@ sk seed                    test contacts, photos with GPS, music with BPM tags,
                            a video, documents, a score, a song, a GPS track, a
                            calendar event and barcode pictures on the device
 sk camera qr-otp           what the back camera sees: a QR code or a picture
+sk mic [--loop] <file>     what the microphone hears: a WAV, MP3, OGG or FLAC
+                           file, or a click track such as click-120-bpm
+sk mic off                 silence again
 sk home pixel | lawnchair  the home screen app; widgets show only on pixel
 sk expose <port>           reach a port the device listens on from the network
 sk lang de-AT              switch the system language

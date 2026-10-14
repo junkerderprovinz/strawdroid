@@ -11,6 +11,11 @@ SEED=/defaults/seed
 # svc-emulator starts the emulator with this file as the back camera's picture
 # and the emulator reads it again each time an app opens the camera.
 CAMERA=/config/camera/back.png
+# svc-emulator has the emulator record from this sink's monitor. Selkies plays
+# the browser's microphone into it as well, so the two are heard mixed.
+MIC_SINK=input
+# The player and its loop carry this name, so `sk mic off` finds both again.
+MIC_PLAYER=strawdroid-mic
 PCAPDROID=com.emanuelef.remote_capture
 NETLOG=strawdroid-netlog.pcap
 
@@ -24,6 +29,9 @@ sk seed                   test contacts, photos with GPS, music with BPM tags,
                           calendar event and barcode pictures on the device
 sk camera <code|file>     what the back camera sees: qr-text, qr-url, qr-wifi,
                           qr-otp, qr-contact, ean13, code128 or a picture
+sk mic [--loop] <file>    what the microphone hears: a WAV, MP3, OGG or FLAC
+                          file, or click-90-bpm, click-120-bpm, click-172-bpm
+sk mic off                silence again
 sk doze on|off            force the device into deep idle, or release it
 sk sms <number> <text>    an incoming SMS from that number
 sk call <number>          an incoming call from that number
@@ -249,6 +257,44 @@ camera)
     cp "${picture}" "${CAMERA}"
     echo "The back camera shows $(basename "${picture}") the next time an app opens it."
     echo "Through the camera only QR codes are read; import a barcode picture instead."
+    ;;
+mic)
+    loop=false
+    if [ "${1:-}" = --loop ]; then
+        loop=true
+        shift
+    fi
+    [ $# -eq 1 ] || { usage >&2; exit 2; }
+    # paplay exits cleanly on SIGTERM, so the loop around it has to go as well.
+    pkill -f -- "${MIC_PLAYER}" || true
+    if [ "$1" = off ]; then
+        echo "The microphone is silent again."
+        exit 0
+    fi
+    if [ -f "${SEED}/$1.mp3" ]; then
+        sound="${SEED}/$1.mp3"
+    else
+        sound="$(resolve "$1")"
+    fi
+    [ -f "${sound}" ] || { echo "No such file: ${sound}" >&2; exit 1; }
+    audio="${EMULATOR_AUDIO:-true}"
+    if [ "${audio,,}" != true ]; then
+        echo "The phone runs without audio. With EMULATOR_AUDIO=true it has a microphone." >&2
+        exit 1
+    fi
+    if ! pactl list short sinks 2>/dev/null | cut -f2 | grep -x "${MIC_SINK}" >/dev/null; then
+        echo "Selkies has no input sink, so there is nothing to play into." >&2
+        exit 1
+    fi
+    # paplay reads the format from the file itself, and PulseAudio converts
+    # the rate to the sink's.
+    setsid nohup bash -c 'while paplay --client-name="$0" -d "$1" "$2" && [ "$3" = true ]; do :; done' \
+        "${MIC_PLAYER}" "${MIC_SINK}" "${sound}" "${loop}" >/dev/null 2>&1 &
+    if [ "${loop}" = true ]; then
+        echo "The microphone hears $(basename "${sound}") over and over until: sk mic off"
+    else
+        echo "The microphone hears $(basename "${sound}") once."
+    fi
     ;;
 doze)
     require_device

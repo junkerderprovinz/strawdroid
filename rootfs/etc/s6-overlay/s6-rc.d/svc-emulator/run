@@ -62,8 +62,24 @@ fi
 
 # Selkies runs PulseAudio for the desktop, so the emulator's sound reaches the
 # browser through it.
+#
+# Without host audio the microphone is silent, and the default source is the
+# desktop's own output, so the phone would hear itself. It records from
+# Selkies' "input" sink instead, which carries the browser's microphone and
+# whatever `sk mic` plays. Selkies creates that sink a few seconds after
+# PulseAudio starts.
 if [[ "${EMULATOR_AUDIO,,}" != "true" ]]; then
     args+=(-no-audio)
+else
+    for _ in $(seq 1 30); do
+        if pactl list short sources 2>/dev/null | cut -f2 | grep -qx input.monitor; then
+            export PULSE_SOURCE=input.monitor
+            args+=(-allow-host-audio)
+            break
+        fi
+        sleep 1
+    done
+    [[ -n "${PULSE_SOURCE:-}" ]] || echo "[svc-emulator] Selkies has no input sink, so the microphone stays silent"
 fi
 
 # The back camera shows a picture that `sk camera` swaps, a QR code to begin

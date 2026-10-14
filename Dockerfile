@@ -244,8 +244,9 @@ ENV EMULATOR_GPU=auto \
 
 # Everything a phone has that the emulator can fake is on by default: the back
 # camera shows a QR code that `sk camera` swaps, the front camera the
-# emulator's test scene, sound goes to the browser, and the SIM has a number
-# SMS apps accept (libphonenumber's own US example).
+# emulator's test scene, sound goes to the browser, the microphone hears what
+# `sk mic` plays, and the SIM has a number SMS apps accept (libphonenumber's
+# own US example).
 ENV EMULATOR_CAMERA_BACK=picture \
     EMULATOR_CAMERA_FRONT=emulated \
     EMULATOR_AUDIO=true \
