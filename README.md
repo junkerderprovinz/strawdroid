@@ -149,7 +149,11 @@ sk push <file|dir>         copy test files into the device's Downloads
 sk doze on | off           force deep idle, or release it
 sk sms <number> <text>     an incoming SMS from that number
 sk call <number>           an incoming call from that number
-sk geo <lat> <lon>         put the device at that position
+sk geo <lat> <lon> [alt]   put the device at that position, altitude in metres
+sk route test-track        drive the GPS along a GPX track at its own pace,
+                           or with --kmh, --speedup and --loop
+sk pin 1357 | off          set or remove the screen lock PIN
+sk finger enroll | touch   add a fingerprint, or touch the sensor with it
 sk sensor pressure 950     set a sensor, or list them without arguments
 sk seed                    test contacts, photos with GPS, music with BPM tags,
                            a video, documents, a score, a song, a GPS track, a

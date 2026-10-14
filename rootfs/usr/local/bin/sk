@@ -27,7 +27,13 @@ sk camera <code|file>     what the back camera sees: qr-text, qr-url, qr-wifi,
 sk doze on|off            force the device into deep idle, or release it
 sk sms <number> <text>    an incoming SMS from that number
 sk call <number>          an incoming call from that number
-sk geo <lat> <lon>        put the device at that position
+sk geo <lat> <lon> [alt]  put the device at that position, altitude in metres
+sk route <file.gpx> [--kmh n] [--speedup n] [--loop]
+                          drive the GPS along a track, one fix per second;
+                          test-track is the Graz loop from sk seed
+sk pin <code>|off         set or remove the screen lock PIN
+sk finger enroll          add a fingerprint (sets PIN 1357 if there is none)
+sk finger touch [id]      touch the sensor with that finger, 1 unless given
 sk sensor [name values]   list the sensors, or set one, e.g. pressure 950
 sk home pixel|lawnchair   the home screen app; widgets show only on pixel
 sk expose <port>          reach a port the device listens on from the network
@@ -130,6 +136,51 @@ contact() {
         --bind mimetype:s:vnd.android.cursor.item/email_v2 --bind "data1:s:${email}" --bind data2:i:1
 }
 
+fingerprints() {
+    adb shell dumpsys fingerprint 2>/dev/null | grep -oE '"count":[0-9]+' | head -n 1 | cut -d: -f2
+}
+
+# The enrolment screens differ by Android version and language, and their buttons
+# carry no ids, but the button that moves on is always the right one in the footer.
+enroll_finger() {
+    local before width height bounds x1 y1 x2 y2
+    if [ ! -s /config/.sk-pin ]; then
+        adb shell locksettings set-pin 1357 >/dev/null
+        printf '1357' >/config/.sk-pin
+    fi
+    before="$(fingerprints)"
+    # A half-finished enrolment brought back to the front skips the PIN screen.
+    adb shell am force-stop com.android.settings
+    adb shell am start -a android.settings.FINGERPRINT_ENROLL >/dev/null
+    sleep 3
+    adb shell input text "$(cat /config/.sk-pin)"
+    adb shell input keyevent KEYCODE_ENTER
+    read -r width height <<<"$(adb shell wm size | grep -oE '[0-9]+x[0-9]+' | tail -n 1 | tr x ' ')"
+    for _ in $(seq 1 40); do
+        sleep 2
+        if [ "$(fingerprints)" -gt "${before:-0}" ]; then
+            adb shell input keyevent KEYCODE_HOME
+            echo "Fingerprint 1 is enrolled. Unlock with: sk finger touch"
+            return 0
+        fi
+        bounds="$(adb exec-out uiautomator dump /dev/tty 2>/dev/null \
+            | grep -oE 'class="android.widget.Button"[^>]*clickable="true"[^>]*bounds="\[[0-9]+,[0-9]+\]\[[0-9]+,[0-9]+\]"' \
+            | grep -oE '\[[0-9]+,[0-9]+\]\[[0-9]+,[0-9]+\]' | tr '[],' '   ' \
+            | awk -v w="${width}" -v h="${height}" '$1 > w / 2 && $2 > h * 3 / 4' \
+            | sort -n -k1 | tail -n 1)" || true
+        if [ -n "${bounds}" ]; then
+            read -r x1 y1 x2 y2 <<<"${bounds}"
+            adb shell input tap $(((x1 + x2) / 2)) $(((y1 + y2) / 2))
+            continue
+        fi
+        adb emu finger touch 1 >/dev/null
+        sleep 0.5
+        adb emu finger remove 1 >/dev/null 2>&1 || true
+    done
+    echo "Enrolment did not finish; look at the screen." >&2
+    return 1
+}
+
 cmd="${1:-}"
 shift || true
 
@@ -229,11 +280,46 @@ call)
     adb emu gsm call "$1"
     ;;
 geo)
-    [ $# -eq 2 ] || { usage >&2; exit 2; }
+    [ $# -eq 2 ] || [ $# -eq 3 ] || { usage >&2; exit 2; }
     require_device
     # The console takes longitude first, the other way round from how a
     # position is usually written.
-    adb emu geo fix "$2" "$1"
+    adb emu geo fix "$2" "$1" ${3:+"$3"} >/dev/null
+    ;;
+route)
+    [ $# -ge 1 ] || { usage >&2; exit 2; }
+    require_device
+    track="$1"
+    shift
+    [ "${track}" = test-track ] && track="${SEED}/test-track.gpx"
+    track="$(resolve "${track}")"
+    [ -f "${track}" ] || { echo "No such file: ${track}" >&2; exit 1; }
+    exec python3 /usr/local/lib/strawdroid/gpx-route.py "${track}" "$@"
+    ;;
+pin)
+    [ $# -eq 1 ] || { usage >&2; exit 2; }
+    require_device
+    current="$(cat /config/.sk-pin 2>/dev/null || true)"
+    if [ "$1" = off ]; then
+        adb shell locksettings clear ${current:+--old "${current}"}
+        rm -f /config/.sk-pin
+    else
+        adb shell locksettings set-pin ${current:+--old "${current}"} "$1"
+        # locksettings needs the old PIN to change or clear it later.
+        printf '%s' "$1" >/config/.sk-pin
+    fi
+    ;;
+finger)
+    require_device
+    case "${1:-}" in
+        touch)
+            adb emu finger touch "${2:-1}" >/dev/null
+            sleep 0.5
+            adb emu finger remove "${2:-1}" >/dev/null 2>&1 || true
+            ;;
+        enroll) enroll_finger ;;
+        *) usage >&2; exit 2 ;;
+    esac
     ;;
 sensor)
     require_device
