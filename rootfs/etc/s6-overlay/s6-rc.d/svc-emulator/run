@@ -78,7 +78,10 @@ else
         pactl list short sources 2>/dev/null | cut -f2 | grep -qx input.monitor && break
         sleep 1
     done
-    if [[ ! -S "${pulse_socket}" ]]; then
+    # A socket file left by a PulseAudio that was killed still exists but
+    # answers nobody, so ask PulseAudio rather than the filesystem.
+    if ! pactl list short modules 2>/dev/null | grep -q "socket=${pulse_socket}"; then
+        rm -f "${pulse_socket}"
         pactl load-module module-native-protocol-unix "socket=${pulse_socket}" auth-anonymous=1 >/dev/null
     fi
     export PULSE_SERVER="unix:${pulse_socket}"
