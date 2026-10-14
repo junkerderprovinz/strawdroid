@@ -62,24 +62,32 @@ fi
 
 # Selkies runs PulseAudio for the desktop, so the emulator's sound reaches the
 # browser through it.
+# Its socket sits in /defaults, which only root may enter, so the emulator gets
+# a socket of its own in /tmp.
 #
 # Without host audio the microphone is silent, and the default source is the
 # desktop's own output, so the phone would hear itself. It records from
 # Selkies' "input" sink instead, which carries the browser's microphone and
 # whatever `sk mic` plays. Selkies creates that sink a few seconds after
 # PulseAudio starts.
+pulse_socket=/tmp/strawdroid-pulse
 if [[ "${EMULATOR_AUDIO,,}" != "true" ]]; then
     args+=(-no-audio)
 else
     for _ in $(seq 1 30); do
-        if pactl list short sources 2>/dev/null | cut -f2 | grep -qx input.monitor; then
-            export PULSE_SOURCE=input.monitor
-            args+=(-allow-host-audio)
-            break
-        fi
+        pactl list short sources 2>/dev/null | cut -f2 | grep -qx input.monitor && break
         sleep 1
     done
-    [[ -n "${PULSE_SOURCE:-}" ]] || echo "[svc-emulator] Selkies has no input sink, so the microphone stays silent"
+    if [[ ! -S "${pulse_socket}" ]]; then
+        pactl load-module module-native-protocol-unix "socket=${pulse_socket}" auth-anonymous=1 >/dev/null
+    fi
+    export PULSE_SERVER="unix:${pulse_socket}"
+    if pactl list short sources 2>/dev/null | cut -f2 | grep -qx input.monitor; then
+        export PULSE_SOURCE=input.monitor
+        args+=(-allow-host-audio)
+    else
+        echo "[svc-emulator] Selkies has no input sink, so the microphone stays silent"
+    fi
 fi
 
 # The back camera shows what `sk camera` puts in front of it, a QR code to begin
