@@ -56,6 +56,9 @@ RUN set -eux; \
         feh \
         # openbox-xdg-autostart logs a complaint on every boot without it.
         python3-xdg \
+        # sk camera encodes pictures, videos and Morse flashes for the
+        # emulator's video camera.
+        ffmpeg \
         locales; \
     fc-cache -f >/dev/null 2>&1 || true; \
     apt-get clean; \
@@ -243,11 +246,11 @@ ENV EMULATOR_GPU=auto \
     EMULATOR_EXTRA_ARGS=""
 
 # Everything a phone has that the emulator can fake is on by default: the back
-# camera shows a QR code that `sk camera` swaps, the front camera the
-# emulator's test scene, sound goes to the browser, the microphone hears what
-# `sk mic` plays, and the SIM has a number SMS apps accept (libphonenumber's
-# own US example).
-ENV EMULATOR_CAMERA_BACK=picture \
+# camera shows a QR code that `sk camera` swaps for a picture, a video or a
+# flashing light, the front camera the emulator's test scene, sound goes to the
+# browser, the microphone hears what `sk mic` plays, and the SIM has a number
+# SMS apps accept (libphonenumber's own US example).
+ENV EMULATOR_CAMERA_BACK=video \
     EMULATOR_CAMERA_FRONT=emulated \
     EMULATOR_AUDIO=true \
     EMULATOR_PHONE_NUMBER=12015550123 \

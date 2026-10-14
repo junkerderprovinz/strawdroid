@@ -82,15 +82,20 @@ else
     [[ -n "${PULSE_SOURCE:-}" ]] || echo "[svc-emulator] Selkies has no input sink, so the microphone stays silent"
 fi
 
-# The back camera shows a picture that `sk camera` swaps, a QR code to begin
+# The back camera shows what `sk camera` puts in front of it, a QR code to begin
 # with, so scanning apps can be tested. The emulator reads the file again each
-# time an app opens the camera.
-camera_back="${EMULATOR_CAMERA_BACK:-picture}"
+# time an app opens the camera. picture takes PNGs as they are; video also
+# plays videos and a flashing light, and sk turns pictures into still videos.
+camera_back="${EMULATOR_CAMERA_BACK:-video}"
 if [[ "${camera_back}" == picture ]]; then
     mkdir -p /config/camera
     [[ -f /config/camera/back.png ]] || cp /defaults/seed/codes/qr-url.png /config/camera/back.png
     chown -R abc:abc /config/camera
     camera_back=imagefile:/config/camera/back.png
+elif [[ "${camera_back}" == video ]]; then
+    [[ -f /config/camera/back.mp4 ]] || sk camera qr-url >/dev/null
+    chown -R abc:abc /config/camera
+    camera_back=videofile:/config/camera/back.mp4
 fi
 
 # -no-snapshot-save: a saved snapshot would carry the last session's state,

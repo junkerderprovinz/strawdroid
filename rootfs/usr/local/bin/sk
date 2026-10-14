@@ -8,9 +8,10 @@ SHARE="${SK_SHARE:-/share}"
 # The share is read-only, so screenshots, recordings and captures go here.
 OUT="${SK_OUT:-/config/captures}"
 SEED=/defaults/seed
-# svc-emulator starts the emulator with this file as the back camera's picture
-# and the emulator reads it again each time an app opens the camera.
-CAMERA=/config/camera/back.png
+# svc-emulator starts the emulator with one of these as the back camera, and
+# the emulator reads it again each time an app opens the camera.
+CAMERA=/config/camera
+CAMERA_MODE="${EMULATOR_CAMERA_BACK:-video}"
 # svc-emulator has the emulator record from this sink's monitor. Selkies plays
 # the browser's microphone into it as well, so the two are heard mixed.
 MIC_SINK=input
@@ -29,6 +30,10 @@ sk seed                   test contacts, photos with GPS, music with BPM tags,
                           calendar event and barcode pictures on the device
 sk camera <code|file>     what the back camera sees: qr-text, qr-url, qr-wifi,
                           qr-otp, qr-contact, ean13, code128 or a picture
+sk camera video <file>    a video instead, mp4 or webm, played in a loop
+sk camera blink <text> [wpm]
+                          a light flashing the text in Morse code, 12 words
+                          a minute unless given
 sk mic [--loop] <file>    what the microphone hears: a WAV, MP3, OGG or FLAC
                           file, or click-90-bpm, click-120-bpm, click-172-bpm
 sk mic off                silence again
@@ -189,6 +194,61 @@ enroll_finger() {
     return 1
 }
 
+# H.264 is the one decoder the emulator is known to carry, so every picture and
+# video becomes H.264, at the 30 frames a second the camera delivers. The file
+# is swapped in whole because an app may open the camera at any moment.
+to_camera() {
+    local filter="$1" next="${CAMERA}/next.mp4"
+    shift
+    mkdir -p "${CAMERA}"
+    ffmpeg -nostdin -loglevel error -y "$@" -an -vf "${filter},fps=30,format=yuv420p" \
+        -c:v libx264 -preset veryfast -crf 18 "${next}"
+    mv "${next}" "${CAMERA}/back.mp4"
+}
+
+# Even sides, as H.264 needs, and no wider than the camera's 1280 pixels.
+FIT="scale='trunc(min(1280,iw)/2)*2':-2"
+
+# One character per unit of Morse timing, 1 lit and 0 dark. A dot is one unit
+# and a dash three; the gaps are one unit within a letter, three between
+# letters and seven between words.
+morse() {
+    local text="${1^^}" ch code i j bits=""
+    local -A table=(
+        [A]=.- [B]=-... [C]=-.-. [D]=-.. [E]=. [F]=..-. [G]=--. [H]=.... [I]=..
+        [J]=.--- [K]=-.- [L]=.-.. [M]=-- [N]=-. [O]=--- [P]=.--. [Q]=--.- [R]=.-.
+        [S]=... [T]=- [U]=..- [V]=...- [W]=.-- [X]=-..- [Y]=-.-- [Z]=--..
+        [0]=----- [1]=.---- [2]=..--- [3]=...-- [4]=....- [5]=..... [6]=-....
+        [7]=--... [8]=---.. [9]=----. ['.']=.-.-.- [',']=--..-- ['?']=..--..
+        ['/']=-..-. ['=']=-...- ['-']=-....-
+    )
+    for ((i = 0; i < ${#text}; i++)); do
+        ch="${text:i:1}"
+        if [ "${ch}" = " " ]; then
+            bits+="0000"
+            continue
+        fi
+        code="${table[${ch}]-}"
+        [ -n "${code}" ] || { echo "There is no Morse code for \"${ch}\"." >&2; exit 1; }
+        for ((j = 0; j < ${#code}; j++)); do
+            if [ "${code:j:1}" = . ]; then bits+="10"; else bits+="1110"; fi
+        done
+        bits+="00"
+    done
+    # The video starts over after this, so the end is a gap between words.
+    printf '%s' "${bits}0000"
+}
+
+# Two by two grey pixels a frame, stretched to full size by ffmpeg.
+flash() {
+    local bits="$1" frames="$2" i f
+    for ((i = 0; i < ${#bits}; i++)); do
+        for ((f = 0; f < frames; f++)); do
+            if [ "${bits:i:1}" = 1 ]; then printf '\377\377\377\377'; else printf '\000\000\000\000'; fi
+        done
+    done
+}
+
 cmd="${1:-}"
 shift || true
 
@@ -246,17 +306,50 @@ seed)
     echo "event (Documents/StrawDroid), and QR codes and barcodes (Pictures/StrawDroid)."
     ;;
 camera)
-    [ $# -eq 1 ] || { usage >&2; exit 2; }
-    if [ -f "${SEED}/codes/$1.png" ]; then
-        picture="${SEED}/codes/$1.png"
-    else
-        picture="$(resolve "$1")"
+    if [[ "${1:-}" =~ ^(video|blink)$ && "${CAMERA_MODE}" != video ]]; then
+        echo "The back camera shows pictures only. Set EMULATOR_CAMERA_BACK to video and restart the container." >&2
+        exit 1
     fi
-    [ -f "${picture}" ] || { echo "No code called $1 and no such file: ${picture}" >&2; exit 1; }
-    mkdir -p "$(dirname "${CAMERA}")"
-    cp "${picture}" "${CAMERA}"
-    echo "The back camera shows $(basename "${picture}") the next time an app opens it."
-    echo "Through the camera only QR codes are read; import a barcode picture instead."
+    case "${1:-}" in
+        video)
+            [ $# -eq 2 ] || { usage >&2; exit 2; }
+            video="$(resolve "$2")"
+            [ -f "${video}" ] || { echo "No such file: ${video}" >&2; exit 1; }
+            to_camera "${FIT}" -i "${video}"
+            echo "The back camera plays $(basename "${video}") the next time an app opens it."
+            ;;
+        blink)
+            { [ $# -eq 2 ] || [ $# -eq 3 ]; } || { usage >&2; exit 2; }
+            wpm="${3:-12}"
+            [[ "${wpm}" =~ ^[1-9][0-9]*$ ]] || { usage >&2; exit 2; }
+            bits="$(morse "$2")"
+            # A unit lasts 1.2 / wpm seconds, which at 30 frames a second is
+            # 36 / wpm frames, rounded to whole ones.
+            frames=$(((36 + wpm / 2) / wpm))
+            [ "${frames}" -ge 1 ] || frames=1
+            flash "${bits}" "${frames}" \
+                | to_camera "scale=640:360:flags=neighbor" -f rawvideo -pix_fmt gray -s 2x2 -r 30 -i -
+            echo "The back camera flashes \"$2\" in Morse code at $((36 / frames)) words a minute"
+            echo "the next time an app opens it."
+            ;;
+        *)
+            [ $# -eq 1 ] || { usage >&2; exit 2; }
+            if [ -f "${SEED}/codes/$1.png" ]; then
+                picture="${SEED}/codes/$1.png"
+            else
+                picture="$(resolve "$1")"
+            fi
+            [ -f "${picture}" ] || { echo "No code called $1 and no such file: ${picture}" >&2; exit 1; }
+            if [ "${CAMERA_MODE}" = video ]; then
+                to_camera "${FIT}" -loop 1 -t 1 -i "${picture}"
+            else
+                mkdir -p "${CAMERA}"
+                cp "${picture}" "${CAMERA}/back.png"
+            fi
+            echo "The back camera shows $(basename "${picture}") the next time an app opens it."
+            echo "Through the camera only QR codes are read; import a barcode picture instead."
+            ;;
+    esac
     ;;
 mic)
     loop=false
