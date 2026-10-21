@@ -516,6 +516,8 @@ lang)
     adb root >/dev/null
     adb wait-for-device
     adb shell setprop persist.sys.locale "$1"
+    # Once Settings has saved a language, this list wins over the property at startup.
+    adb shell settings put system system_locales "$1"
     # The flag stays set through a framework restart, and the wait below would
     # pass at once. system_server sets it again when it is ready.
     adb shell setprop sys.boot_completed 0
