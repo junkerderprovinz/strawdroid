@@ -361,6 +361,7 @@ mic)
     # paplay exits cleanly on SIGTERM, so the loop around it has to go as well.
     pkill -f -- "${MIC_PLAYER}" || true
     if [ "$1" = off ]; then
+        adb emu avd hostmicoff >/dev/null 2>&1 || true
         echo "The microphone is silent again."
         exit 0
     fi
@@ -379,6 +380,9 @@ mic)
         echo "Selkies has no input sink, so there is nothing to play into." >&2
         exit 1
     fi
+    require_device
+    # Every boot starts with the host microphone muted, -allow-host-audio notwithstanding.
+    adb emu avd hostmicon >/dev/null
     # paplay reads the format from the file itself, and PulseAudio converts
     # the rate to the sink's.
     setsid nohup bash -c 'while paplay --client-name="$0" -d "$1" "$2" && [ "$3" = true ]; do :; done' \
