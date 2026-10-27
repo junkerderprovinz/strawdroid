@@ -7,6 +7,8 @@
 
 <p align="center">
   <a href="https://github.com/junkerderprovinz/strawdroid/actions/workflows/build.yml"><img src="https://img.shields.io/github/actions/workflow/status/junkerderprovinz/strawdroid/build.yml?branch=main&label=Build&style=for-the-badge&logo=githubactions&logoColor=white" alt="Build" height="36"></a>&nbsp;
+  <a href="https://hub.docker.com/r/junkerderprovinz/strawdroid"><img src="https://img.shields.io/docker/pulls/junkerderprovinz/strawdroid?style=for-the-badge&logo=docker&logoColor=white&label=Pulls&color=1d99f3" alt="Docker Pulls" height="36"></a>&nbsp;
+  <a href="https://hub.docker.com/r/junkerderprovinz/strawdroid"><img src="https://img.shields.io/docker/image-size/junkerderprovinz/strawdroid/latest?style=for-the-badge&logo=docker&logoColor=white&label=Size&color=1d99f3" alt="Image Size" height="36"></a>&nbsp;
   <a href="https://developer.android.com/about/versions/16"><img src="https://img.shields.io/badge/Android-16%20%7C%20API%2036-3ddc84?style=for-the-badge&logo=android&logoColor=white" alt="Android 16, API 36" height="36"></a>&nbsp;
   <a href="https://github.com/selkies-project/selkies"><img src="https://img.shields.io/badge/Selkies-WebRTC-393939?style=for-the-badge&logo=webrtc&logoColor=white" alt="Selkies" height="36"></a>&nbsp;
   <a href="templates/strawdroid.xml"><img src="https://img.shields.io/badge/Unraid-Template-f15a2c?style=for-the-badge&logo=unraid&logoColor=white" alt="Unraid Template" height="36"></a>&nbsp;
@@ -116,7 +118,7 @@ docker run -d --name StrawDroid \
   -e PUID=99 -e PGID=100 \
   -p 3001:3001 -p 5555:5555 \
   -v /path/to/config:/config \
-  ghcr.io/junkerderprovinz/strawdroid:latest
+  junkerderprovinz/strawdroid:latest
 ```
 
 `PUID` and `PGID` should be the user that owns `/path/to/config` on the host. The values above are Unraid's `nobody:users`; on a plain Linux box `$(id -u)` and `$(id -g)` are usually right. On Unraid use [`templates/strawdroid.xml`](templates/strawdroid.xml), which puts the container on its own IP so no port mapping is needed.

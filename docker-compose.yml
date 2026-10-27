@@ -7,7 +7,7 @@
 
 services:
   strawdroid:
-    image: ghcr.io/junkerderprovinz/strawdroid:latest
+    image: junkerderprovinz/strawdroid:latest
     container_name: StrawDroid
 
     # Without KVM the emulator does not start, and the container log says so.
