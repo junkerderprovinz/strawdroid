@@ -85,7 +85,7 @@ jobs:
         if: github.ref_type == 'tag'
         run: |
           git fetch --tags --force --quiet
-          newest=$(git tag -l 'v[0-9]*.[0-9]*.[0-9]*' | sort -V | tail -1)
+          newest=$(git tag -l | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -1)
           echo "this tag: ${GITHUB_REF_NAME}"
           echo "newest:   ${newest}"
           if [ "$newest" = "${GITHUB_REF_NAME}" ]; then
@@ -100,7 +100,9 @@ jobs:
         id: meta
         uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6
         with:
+          # The action adds latest to every semver tag unless the flavor turns that off.
           flavor: |
+            latest=false
             suffix=${{ matrix.suffix }},onlatest=true
           images: |
             ${{ env.IMAGE }}
