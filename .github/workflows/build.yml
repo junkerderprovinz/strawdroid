@@ -39,6 +39,7 @@ jobs:
       contents: read
     outputs:
       tag: ${{ steps.newest.outputs.tag }}
+      sha: ${{ steps.newest.outputs.sha }}
     steps:
       - name: Find the newest release
         id: newest
@@ -48,6 +49,7 @@ jobs:
           tag=$(gh release view -R "$GITHUB_REPOSITORY" --json tagName --jq .tagName)
           echo "rebuilding $tag"
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "sha=$(gh api "repos/$GITHUB_REPOSITORY/commits/$tag" --jq .sha)" >> "$GITHUB_OUTPUT"
 
   build:
     needs: release
@@ -144,6 +146,9 @@ jobs:
             type=semver,pattern={{version}},value=${{ needs.release.outputs.tag }}
             type=semver,pattern={{major}}.{{minor}},value=${{ needs.release.outputs.tag }}
             type=semver,pattern={{major}},value=${{ needs.release.outputs.tag }}
+          # A rebuild of the newest release carries the release's commit, not main's.
+          labels: |
+            ${{ needs.release.outputs.tag != '' && format('org.opencontainers.image.revision={0}', needs.release.outputs.sha) || '' }}
 
       # amd64 only: the emulator runs an x86_64 system image under KVM, which an
       # arm64 build could not.
