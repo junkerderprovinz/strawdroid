@@ -11,21 +11,47 @@ on:
     paths-ignore:
       - "**/*.md"
       - ".github/assets/**"
+  # Weekly, to rebuild the newest release on fresh base images and packages.
+  schedule:
+    - cron: '20 5 * * 0'
   workflow_dispatch:
 
 permissions:
   contents: write   # release asset upload
   packages: write
 
+# A rebuild of the newest release runs apart from pushes, so neither cancels
+# the other.
 concurrency:
-  group: build-${{ github.ref }}
+  group: build-${{ (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'rebuild' || github.ref }}
   cancel-in-progress: true
 
 env:
   IMAGE: ghcr.io/${{ github.repository }}
 
 jobs:
+  # Rebuilds refresh the newest release, which is what people run, not the
+  # tip of main.
+  release:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      tag: ${{ steps.newest.outputs.tag }}
+    steps:
+      - name: Find the newest release
+        id: newest
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag=$(gh release view -R "$GITHUB_REPOSITORY" --json tagName --jq .tagName)
+          echo "rebuilding $tag"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
   build:
+    needs: release
+    if: ${{ !failure() && !cancelled() }}
     name: Build and publish (amd64, API ${{ matrix.api }})
     runs-on: ubuntu-latest
     timeout-minutes: 90
@@ -42,6 +68,8 @@ jobs:
             suffix: "-api34"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ needs.release.outputs.tag }}
 
       # The image is around 9 GB, which with the build cache does not fit on a
       # stock runner, and a full disk fails late and looks like a broken
@@ -107,15 +135,15 @@ jobs:
           images: |
             ${{ env.IMAGE }}
             name=docker.io/${{ vars.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }},enable=${{ vars.DOCKERHUB_USERNAME != '' }}
-          # `latest` is the newest released version; the tip of main answers to
-          # `edge`.
+          # `latest` is the newest released version, set by its tag build and by
+          # every rebuild of it, and the tip of main answers to `edge`.
           tags: |
-            type=sha,format=short
-            type=raw,value=edge,enable=${{ github.ref_type == 'branch' && github.ref_name == github.event.repository.default_branch }}
-            type=raw,value=latest,enable=${{ github.ref_type == 'tag' && steps.newest.outputs.is_newest == 'true' }}
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=semver,pattern={{major}}
+            type=sha,format=short,enable=${{ needs.release.outputs.tag == '' }}
+            type=raw,value=edge,enable=${{ github.ref_type == 'branch' && github.ref_name == github.event.repository.default_branch && needs.release.outputs.tag == '' }}
+            type=raw,value=latest,enable=${{ (github.ref_type == 'tag' && steps.newest.outputs.is_newest == 'true') || needs.release.outputs.tag != '' }}
+            type=semver,pattern={{version}},value=${{ needs.release.outputs.tag }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ needs.release.outputs.tag }}
+            type=semver,pattern={{major}},value=${{ needs.release.outputs.tag }}
 
       # amd64 only: the emulator runs an x86_64 system image under KVM, which an
       # arm64 build could not.
@@ -131,6 +159,7 @@ jobs:
             ANDROID_API=${{ matrix.api }}
           cache-from: type=gha,scope=api${{ matrix.api }}
           cache-to: type=gha,mode=max,scope=api${{ matrix.api }}
+          no-cache: ${{ needs.release.outputs.tag != '' }}
           provenance: false
 
       # The README's download buttons point at releases/latest/download/. A
