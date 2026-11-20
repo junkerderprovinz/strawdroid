@@ -19,7 +19,8 @@
 # the HTTPS WebUI on 3001 and no login by default. GPU wiring is supplied at
 # `docker run` by the Unraid template, which keeps the image vendor-neutral.
 # The flavour is pinned rather than :latest or the floating :dev tag.
-ARG BASE_TAG=ubunturesolute
+# renovate: datasource=docker depName=ghcr.io/linuxserver/baseimage-selkies
+ARG BASE_TAG=ubunturesolute@sha256:6c5843fa3df0c9463d0c0d97f17f9d974704a63e43fc146526f5c67e29c5f2ba
 FROM ghcr.io/linuxserver/baseimage-selkies:${BASE_TAG}
 
 LABEL maintainer="junkerderprovinz"
@@ -140,9 +141,11 @@ ENV ANDROID_AVD_HOME=/config/.android/avd \
 #
 # Lawnchair's file name does not follow its tag (v15.0.0-beta3.0 against
 # Lawnchair.15.0.0.Beta.3.0.apk), so both are given rather than one derived.
+# renovate: datasource=github-releases depName=LawnchairLauncher/lawnchair extractVersion=^(?<version>.+)$
 ARG LAWNCHAIR_TAG=v15.0.0-beta3.0
 ARG LAWNCHAIR_FILE=Lawnchair.15.0.0.Beta.3.0.apk
 ARG LAWNCHAIR_SHA=d4200d0985169fd79ba1bd225d653f2a2fe7b50aa07cb0d05ca64c7623f86059
+# renovate: datasource=github-releases depName=Donnnno/Arcticons
 ARG ARCTICONS_VERSION=15.0.5
 ARG ARCTICONS_SHA=1bca18ec58c75f8a30a301996a403330e1e2ccab7df325aeb5f7e941dc5b79fe
 
@@ -158,9 +161,11 @@ RUN set -eux; \
 
 # svc-test-tools installs Shizuku (Apache-2.0) and PCAPdroid (GPL-3.0) the same
 # way: pinned, checksum-verified, unmodified, and credited in the README.
+# renovate: datasource=github-releases depName=RikkaApps/Shizuku extractVersion=^(?<version>.+)$
 ARG SHIZUKU_TAG=v13.6.0
 ARG SHIZUKU_FILE=shizuku-v13.6.0.r1086.2650830c-release.apk
 ARG SHIZUKU_SHA=6e273ab0e991c4e79bc8b1bbb9b9dd739ccac1a8712a541a214078886b7b790f
+# renovate: datasource=github-releases depName=emanuele-f/PCAPdroid
 ARG PCAPDROID_VERSION=2.0.2
 ARG PCAPDROID_SHA=eb437cbe10e2c7e332c06d7401d8f9036c3722747f541e6e231d1bd9ab6dbffc
 
