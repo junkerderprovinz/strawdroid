@@ -146,8 +146,8 @@ ARG LAWNCHAIR_TAG=v15.0.0-beta3.0
 ARG LAWNCHAIR_FILE=Lawnchair.15.0.0.Beta.3.0.apk
 ARG LAWNCHAIR_SHA=d4200d0985169fd79ba1bd225d653f2a2fe7b50aa07cb0d05ca64c7623f86059
 # renovate: datasource=github-releases depName=Donnnno/Arcticons
-ARG ARCTICONS_VERSION=15.0.5
-ARG ARCTICONS_SHA=1bca18ec58c75f8a30a301996a403330e1e2ccab7df325aeb5f7e941dc5b79fe
+ARG ARCTICONS_VERSION=15.4.7
+ARG ARCTICONS_SHA=8a87ffa2208a49f10e6d8cae58c190da12f80b09dc3ddecfb627d9125f66f3bc
 
 RUN set -eux; \
     mkdir -p /defaults/apk; \
