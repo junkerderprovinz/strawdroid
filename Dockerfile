@@ -44,6 +44,8 @@ ENV TITLE="StrawDroid" \
 # Android Studio cannot reach the device.
 RUN set -eux; \
     apt-get update; \
+    # The upgrade takes the security fixes published since the base image was built.
+    DEBIAN_FRONTEND=noninteractive apt-get upgrade -y; \
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
         curl wget ca-certificates unzip xz-utils jq \
         socat \
