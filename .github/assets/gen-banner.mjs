@@ -1,6 +1,6 @@
 /**
  * Generates the light and dark StrawDroid banners, 1600x500, on the pattern of
- * glimstone's gen-banner.mjs: the mark on the left, the name in Bree Serif Light
+ * glimstone's gen-banner.mjs: the mark on the left, the name in Bree Serif Regular
  * and the claim in Bree Light. Text is turned into SVG paths with opentype.js so
  * the banner looks the same everywhere without a font.
  *
@@ -47,7 +47,7 @@ const THEMES = [
 
 // The house typeface is licensed, so it is read from a local folder and never committed.
 const fonts = process.env.HOUSE_FONTS ?? join(process.env.LOCALAPPDATA ?? tmpdir(), "halleluja-fonts");
-const font = opentype.parse(readFileSync(join(fonts, "bree-serif-light.ttf")).buffer);
+const font = opentype.parse(readFileSync(join(fonts, "bree-serif-regular.ttf")).buffer);
 const claimFont = opentype.parse(readFileSync(join(fonts, "bree-light.ttf")).buffer);
 
 const startX = 165;
