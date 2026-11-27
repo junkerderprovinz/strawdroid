@@ -166,8 +166,8 @@ ARG SHIZUKU_TAG=v13.6.0
 ARG SHIZUKU_FILE=shizuku-v13.6.0.r1086.2650830c-release.apk
 ARG SHIZUKU_SHA=6e273ab0e991c4e79bc8b1bbb9b9dd739ccac1a8712a541a214078886b7b790f
 # renovate: datasource=github-releases depName=emanuele-f/PCAPdroid
-ARG PCAPDROID_VERSION=2.0.4
-ARG PCAPDROID_SHA=b601798767bb8c989a2ec389e4d21a2a0ab2ae2c2f9292238b4e3ee2f52af811
+ARG PCAPDROID_VERSION=2.0.5
+ARG PCAPDROID_SHA=3568ed4b172269e23f0e22930ef49f15bb98816c1411cceddfae5765a1b383b7
 
 RUN set -eux; \
     curl -fsSL -o /defaults/apk/shizuku.apk \
