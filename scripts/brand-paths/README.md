@@ -2,7 +2,7 @@
 
 Path data for the download buttons, taken from
 [Font Awesome Free 6.7.2](https://fontawesome.com). The icons are licensed
-**CC BY 4.0**; Font Awesome's fonts are OFL and its code MIT, neither of which
+**CC BY 4.0**. Font Awesome's fonts are OFL and its code MIT, neither of which
 is used here.
 
 - `docker.txt`, `windows.txt`, `linux.txt` come from the **brands** set.
