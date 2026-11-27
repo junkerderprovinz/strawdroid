@@ -42,17 +42,17 @@
   <picture><source media="(prefers-color-scheme: dark)" srcset=".github/assets/sections/group-server-dark.svg"><img src=".github/assets/sections/group-server.svg" alt="Server" width="100%"></picture>
 </p>
 <p align="center">
-  &nbsp;<a href="https://ca.unraid.net/apps/strawdroid-023jr4h1s1s5il"><img src="https://raw.githubusercontent.com/junkerderprovinz/strawdroid/main/.github/assets/download-buttons/buttons.svg?v=b9304d0238bc#svgView(viewBox(0,-20.153,841.9,285.606))" alt="Install from Unraid&#x27;s Community Applications" width="160" height="54.278"></a>&nbsp;
-  &nbsp;<a href="https://github.com/junkerderprovinz/strawdroid/releases/latest/download/docker-compose.yml"><img src="https://raw.githubusercontent.com/junkerderprovinz/strawdroid/main/.github/assets/download-buttons/buttons.svg?v=b9304d0238bc#svgView(viewBox(866,-20.153,841.9,285.606))" alt="Download the docker-compose file" width="160" height="54.278"></a>&nbsp;
-  &nbsp;<a href="https://github.com/junkerderprovinz/strawdroid/archive/refs/heads/main.zip"><img src="https://raw.githubusercontent.com/junkerderprovinz/strawdroid/main/.github/assets/download-buttons/buttons.svg?v=b9304d0238bc#svgView(viewBox(1732,-20.153,841.9,285.606))" alt="Download the source archive" width="160" height="54.278"></a>&nbsp;
+  <a href="https://ca.unraid.net/apps/strawdroid-023jr4h1s1s5il"><img src="https://raw.githubusercontent.com/junkerderprovinz/strawdroid/main/.github/assets/download-buttons/buttons.svg?v=b93ac4d52bae#svgView(viewBox(-23.082,-20.153,888.064,285.606))" alt="Install from Unraid&#x27;s Community Applications" width="168.773" height="54.278"></a>
+  <a href="https://github.com/junkerderprovinz/strawdroid/releases/latest/download/docker-compose.yml"><img src="https://raw.githubusercontent.com/junkerderprovinz/strawdroid/main/.github/assets/download-buttons/buttons.svg?v=b93ac4d52bae#svgView(viewBox(890.918,-20.153,888.064,285.606))" alt="Download the docker-compose file" width="168.773" height="54.278"></a>
+  <a href="https://github.com/junkerderprovinz/strawdroid/archive/refs/heads/main.zip"><img src="https://raw.githubusercontent.com/junkerderprovinz/strawdroid/main/.github/assets/download-buttons/buttons.svg?v=b93ac4d52bae#svgView(viewBox(1804.918,-20.153,888.064,285.606))" alt="Download the source archive" width="168.773" height="54.278"></a>
 </p>
 <br>
 <p align="center">
   <picture><source media="(prefers-color-scheme: dark)" srcset=".github/assets/sections/group-desktop-dark.svg"><img src=".github/assets/sections/group-desktop.svg" alt="Desktop" width="100%"></picture>
 </p>
 <p align="center">
-  &nbsp;<a href="https://github.com/junkerderprovinz/strawdroid/releases/latest/download/start-windows.ps1"><img src="https://raw.githubusercontent.com/junkerderprovinz/strawdroid/main/.github/assets/download-buttons/buttons.svg?v=b9304d0238bc#svgView(viewBox(2598,-20.153,841.9,285.606))" alt="Download the Windows start script" width="160" height="54.278"></a>&nbsp;
-  &nbsp;<a href="https://github.com/junkerderprovinz/strawdroid/releases/latest/download/start-linux.sh"><img src="https://raw.githubusercontent.com/junkerderprovinz/strawdroid/main/.github/assets/download-buttons/buttons.svg?v=b9304d0238bc#svgView(viewBox(3464,-20.153,841.9,285.606))" alt="Download the Linux start script" width="160" height="54.278"></a>&nbsp;
+  <a href="https://github.com/junkerderprovinz/strawdroid/releases/latest/download/start-windows.ps1"><img src="https://raw.githubusercontent.com/junkerderprovinz/strawdroid/main/.github/assets/download-buttons/buttons.svg?v=b93ac4d52bae#svgView(viewBox(2718.918,-20.153,888.064,285.606))" alt="Download the Windows start script" width="168.773" height="54.278"></a>
+  <a href="https://github.com/junkerderprovinz/strawdroid/releases/latest/download/start-linux.sh"><img src="https://raw.githubusercontent.com/junkerderprovinz/strawdroid/main/.github/assets/download-buttons/buttons.svg?v=b93ac4d52bae#svgView(viewBox(3632.918,-20.153,888.064,285.606))" alt="Download the Linux start script" width="168.773" height="54.278"></a>
 </p>
 <!-- /download-buttons -->
 
@@ -72,9 +72,9 @@ If it has earned a place on your server or computer, toss a coin to your knight:
 
 <!-- give-buttons: written by scripts/gen_download_buttons.py -->
 <p align="center">
-  &nbsp;<a href="https://buymeacoffee.com/junkerderprovinz"><img src="https://raw.githubusercontent.com/junkerderprovinz/strawdroid/main/.github/assets/download-buttons/buttons.svg?v=b9304d0238bc#svgView(viewBox(4330,-20.153,841.9,285.606))" alt="Buy me a coffee" width="160" height="54.278"></a>&nbsp;
-  &nbsp;<a href="https://www.paypal.com/donate/?hosted_button_id=76FVV52TKXTUS"><img src="https://raw.githubusercontent.com/junkerderprovinz/strawdroid/main/.github/assets/download-buttons/buttons.svg?v=b9304d0238bc#svgView(viewBox(5196,-20.153,841.9,285.606))" alt="PayPal" width="160" height="54.278"></a>&nbsp;
-  &nbsp;<a href="https://junkerderprovinz.github.io/junkerderprovinz/"><img src="https://raw.githubusercontent.com/junkerderprovinz/strawdroid/main/.github/assets/download-buttons/buttons.svg?v=b9304d0238bc#svgView(viewBox(6062,-20.153,841.9,285.606))" alt="Donate with crypto" width="160" height="54.278"></a>&nbsp;
+  <a href="https://buymeacoffee.com/junkerderprovinz"><img src="https://raw.githubusercontent.com/junkerderprovinz/strawdroid/main/.github/assets/download-buttons/buttons.svg?v=b93ac4d52bae#svgView(viewBox(4546.918,-20.153,888.064,285.606))" alt="Buy me a coffee" width="168.773" height="54.278"></a>
+  <a href="https://www.paypal.com/donate/?hosted_button_id=76FVV52TKXTUS"><img src="https://raw.githubusercontent.com/junkerderprovinz/strawdroid/main/.github/assets/download-buttons/buttons.svg?v=b93ac4d52bae#svgView(viewBox(5460.918,-20.153,888.064,285.606))" alt="PayPal" width="168.773" height="54.278"></a>
+  <a href="https://junkerderprovinz.github.io/junkerderprovinz/"><img src="https://raw.githubusercontent.com/junkerderprovinz/strawdroid/main/.github/assets/download-buttons/buttons.svg?v=b93ac4d52bae#svgView(viewBox(6374.918,-20.153,888.064,285.606))" alt="Donate with crypto" width="168.773" height="54.278"></a>
 </p>
 <!-- /give-buttons -->
 
