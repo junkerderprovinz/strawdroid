@@ -19,5 +19,5 @@ button's one ink.
 Each brand mark is a trademark of its owner and is used the one way a trademark
 may be used without permission: to name the thing it points at. Each button
 links to that thing, the marks are unmodified, and nothing here claims
-endorsement by or affiliation with Docker, Inc., Microsoft, the Linux
-Foundation or Lime Technology.
+endorsement by or affiliation with Docker, Inc., Microsoft, Linus Torvalds or
+Lime Technology.
